@@ -1,0 +1,1 @@
+# fujitamasahir.github.io
