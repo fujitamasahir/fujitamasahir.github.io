@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Masahiro Fujita — software and AI engineer interested in humanoid robotics, reliable manipulation, and human–robot collaboration.">
+<title>Masahiro Fujita</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#222;font-family:"Titillium Web",Verdana,Helvetica,sans-serif;font-size:16px;line-height:1.6}
+main{width:min(840px,100%);margin:0 auto;padding:42px 30px 24px}
+h1{font-size:38px;line-height:1.2;font-weight:400;text-align:center;margin:0 0 36px}
+h2{font-size:23px;font-weight:600;line-height:1.3;margin:0 0 26px}
+h3{font-size:18px;line-height:1.4;font-weight:600;margin:0 0 7px}
+p{margin:0 0 17px}
+.greek{font-family:"Cambria Math","STIX Two Math","Times New Roman",serif;font-weight:400;font-style:normal}
+[hidden]{display:none!important}
+a{color:#1772d0;text-decoration:none}
+a:hover{color:#c77515}
+a:focus-visible{outline:2px solid #1772d0;outline-offset:4px;border-radius:2px}
+.intro{display:grid;grid-template-columns:2fr 1fr;gap:34px;align-items:start;padding:0 10px 26px}
+.bio p:last-of-type{margin-bottom:20px}
+.profile-links{display:flex;flex-wrap:wrap;align-items:center;gap:0 9px;font-size:15px;line-height:1.9}
+.separator{color:#999}
+.unavailable{color:#777;cursor:help}
+.portrait{margin:0;width:100%;aspect-ratio:4/5;background:#f4f4f4;border-radius:12px;overflow:hidden;position:relative}
+.portrait-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#888;gap:12px}
+.portrait-placeholder svg{width:65%;height:auto;color:#d4d4d4}
+.portrait-placeholder span{font-size:13px}
+.portrait img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.asset-note{font-size:12px;color:#888;margin:12px 0 0;line-height:1.5}
+hr{border:0;height:1px;background:linear-gradient(to right,transparent,#aaa 15%,#aaa 85%,transparent);margin:8px 0 30px}
+section.work{padding:0 10px 7px}
+.project{display:grid;grid-template-columns:1fr 2fr;gap:28px;align-items:center;margin-bottom:27px}
+.project-image{display:block;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;overflow:hidden}
+.project-image img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;padding:10px}
+.meta{margin-bottom:11px;color:#555;font-size:15px}
+.project p{margin-bottom:12px}
+.project .award{color:#333;font-weight:600}
+.entry{display:grid;grid-template-columns:1fr 2fr;gap:28px;align-items:center;margin:0 0 30px}
+.publication-image{display:grid;place-items:center;aspect-ratio:4/3;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;overflow:hidden;position:relative;color:#999;font-size:14px}
+.publication-image img{position:absolute;width:100%;height:100%;object-fit:contain;background:#fff;padding:8px}
+.project-video{position:relative;aspect-ratio:4/3}
+.project-video>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;padding:0}
+.project-video iframe{position:absolute;inset:0;display:block;width:100%;height:100%;border:0;opacity:0;pointer-events:none}
+.project-video.playing iframe{opacity:1}
+.project-video .video-link{position:absolute;inset:0;z-index:2}
+.project-video .video-link:focus-visible{outline-offset:-4px}
+.entry .authors{margin:6px 0 3px;font-size:15px}
+.entry .venue{margin:0 0 6px;font-size:15px}
+.entry .paper-links{font-size:15px}
+footer{text-align:center;color:#888;font-size:12px;padding:8px 0 16px}
+@media(max-width:600px){
+main{padding:30px 22px 16px}
+h1{font-size:33px;margin-bottom:28px}
+.intro{grid-template-columns:1fr;gap:24px;padding:0 0 24px}
+.portrait{width:min(210px,65%);justify-self:center}
+.project,.entry{grid-template-columns:1fr;gap:17px}
+.publication-image{width:100%;max-width:300px}
+.project-image{max-width:300px}
+section.work{padding-left:0;padding-right:0}
+}
+@media(prefers-reduced-motion:no-preference){a{transition:color .15s ease}}
+</style>
+</head>
+<body>
+<main>
+<h1>Masahiro Fujita</h1>
+<section class="intro" id="about" aria-label="About Masahiro">
+<div class="bio">
+<p>I'm a software and AI engineer with <strong>7+ years of professional experience</strong> spanning software, AI, and robotics, and a member of the <strong>2012 KOSEN Robocon national championship team</strong>.</p>
+<p>At Brigham Young University's Security Operations IT division, I develop AI systems for physical security, including access-control anomaly detection. My previous work includes humanoid robot motion control.</p>
+<p>My goal is to make <strong>low-cost humanoid robots</strong> useful in everyday life, reducing repetitive labor and the cost of essential services. I see physical security as a promising early application and my current work as a foundation for understanding real operational needs. I aim to pursue graduate research in reliable manipulation and safe human–robot collaboration.</p>
+<nav class="profile-links" aria-label="Professional profiles">
+<a href="assets/Masahiro_Fujita_Resume.pdf" target="_blank" rel="noopener">resume</a><span class="separator" aria-hidden="true">|</span>
+<a href="https://scholar.google.com/citations?user=4_Z2m-4AAAAJ">Google Scholar</a><span class="separator" aria-hidden="true">|</span>
+<a href="https://www.linkedin.com/in/masahiro-fujita/">LinkedIn</a><span class="separator" aria-hidden="true">|</span>
+<a href="https://github.com/fujitamasahir">GitHub</a>
+</nav>
+
+</div>
+<figure class="portrait" aria-label="Profile photo placeholder">
+<div class="portrait-placeholder">
+<svg viewBox="0 0 120 140" aria-hidden="true"><circle cx="60" cy="42" r="25" fill="currentColor"/><path d="M14 133v-12c0-29 19-46 46-46s46 17 46 46v12" fill="currentColor"/></svg>
+<span>Profile photo coming soon</span>
+</div>
+<!-- Add assets/profile.jpg to display the portrait in this reserved space. -->
+<img src="assets/profile.jpg" alt="Masahiro Fujita" onload="this.parentElement.setAttribute('aria-label','Portrait of Masahiro Fujita');this.previousElementSibling.hidden=true" onerror="this.remove()">
+</figure>
+</section>
+<hr>
+<section class="work" id="projects" aria-labelledby="projects-heading">
+<h2 id="projects-heading">Projects</h2>
+<article class="project">
+<div class="project-image project-video" id="h2l-preview">
+<img src="assets/h2l-strawberry/harvesting.jpg" alt="Sciurus17 robot harvesting strawberries" onerror="this.src='https://i.ytimg.com/vi/HqK0_CHvobk/hqdefault.jpg';this.onerror=null">
+<iframe id="h2l-preview-player" title="H2L robot teleoperation for strawberry harvesting" src="https://www.youtube.com/embed/HqK0_CHvobk?autoplay=1&amp;mute=1&amp;playsinline=1&amp;start=67&amp;end=72&amp;controls=0&amp;disablekb=1&amp;enablejsapi=1&amp;rel=0" allow="autoplay; encrypted-media" tabindex="-1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<a class="video-link" href="projects/h2l-strawberry.html" aria-label="Read about robot teleoperation at H2L"></a>
+</div>
+<div><h3><a href="projects/h2l-strawberry.html">Robot Teleoperation for Remote Strawberry Harvesting</a></h3>
+<p class="meta">H2L Inc. · Sciurus17 robot</p>
+<p>I improved ROS-based control software, motion-teaching AI algorithms, and finger hardware, and supported on-site demonstrations and repairs.</p>
+<a href="projects/h2l-strawberry.html">project page</a></div></article>
+
+<article class="project">
+<div class="project-image project-video" id="robocon-preview">
+<img src="assets/robocon-2012/robot-scoring.jpg" alt="Wanko Kyodai robot with its launching mechanism extended">
+<iframe id="robocon-preview-player" title="Wanko Kyodai robot in the final match" src="https://www.youtube.com/embed/CQqN5mIE10w?autoplay=1&amp;mute=1&amp;playsinline=1&amp;start=251&amp;end=260&amp;controls=0&amp;disablekb=1&amp;enablejsapi=1&amp;rel=0" allow="autoplay; encrypted-media" tabindex="-1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<a class="video-link" href="projects/robocon-2012.html" aria-label="Read about the Wanko Kyodai robot"></a>
+</div>
+<div>
+<h3><a href="projects/robocon-2012.html">KOSEN Robocon 2012: Best Pet</a></h3>
+<p class="meta">Ichinoseki National College of Technology · 2012</p>
+<p class="award">National Champion</p>
+<p>I designed, fabricated, and tested the ball-launching mechanism for our walking robot. Through repeated experiments and mechanical improvements, our team won Japan's national KOSEN robotics competition.</p>
+<a href="projects/robocon-2012.html">project page</a>
+</div>
+</article>
+</section>
+<hr>
+<section class="work" id="publications" aria-labelledby="publications-heading">
+<h2 id="publications-heading">Publications</h2>
+<article class="entry">
+<a class="publication-image" href="https://doi.org/10.1038/s41467-018-06270-6" aria-label="Nature Communications paper thumbnail"><span>Research image</span><img src="assets/publications/nature-communications-2018.jpg" alt="Nature Communications paper thumbnail" onerror="this.remove()"></a>
+<div>
+<h3><a href="https://doi.org/10.1038/s41467-018-06270-6">Concyclic CH–<span class="greek">π</span> arrays for single-axis rotations of a bowl in a tube</a></h3>
+<p class="authors">Taisuke Matsuno, <strong>Masahiro Fujita</strong>, Kengo Fukunaga, Sota Sato, Hiroyuki Isobe</p>
+<p class="venue"><em>Nature Communications</em>, vol. 9, Art. no. 3779, 2018</p>
+<div class="paper-links"><a href="https://doi.org/10.1038/s41467-018-06270-6">paper</a> <span class="separator" aria-hidden="true">|</span> <a href="https://www.jst.go.jp/pr/announce/20180917/index.html">press release (Japanese)</a></div>
+</div>
+</article>
+<article class="entry">
+<a class="publication-image" href="https://doi.org/10.1246/cl.160258" aria-label="Chemistry Letters paper thumbnail"><span>Research image</span><img src="assets/publications/chemistry-letters-2016.jpg" alt="Chemistry Letters paper thumbnail" onerror="this.remove()"></a>
+<div>
+<h3><a href="https://doi.org/10.1246/cl.160258">Synthesis and Structures of <span class="greek">π</span>-Extended [<i>n</i>]Cyclo-<i>para</i>-phenylenes (<i>n</i> = 12, 16, 20) Containing <i>n</i>/2 Nitrogen Atoms</a></h3>
+<p class="authors">Koki Ikemoto, <strong>Masahiro Fujita</strong>, Pei Chui Too, Ya Lin Tnay, Sota Sato, Shunsuke Chiba, Hiroyuki Isobe</p>
+<p class="venue"><em>Chemistry Letters</em>, vol. 45, pp. 658–660, 2016</p>
+<div class="paper-links"><a href="https://doi.org/10.1246/cl.160258">paper</a></div>
+</div>
+</article>
+</section>
+<hr>
+<footer>© 2026 Masahiro Fujita</footer>
+</main>
+<script>
+(function(){
+"use strict";
+const timers=[];
+window.onYouTubeIframeAPIReady=function(){
+[{id:"robocon-preview",start:251,end:260},{id:"h2l-preview",start:67,end:72}].forEach(function(config){
+const container=document.getElementById(config.id);
+let player=new YT.Player(config.id+"-player",{events:{
+onReady:function(e){e.target.mute();e.target.seekTo(config.start,true);e.target.playVideo();timers.push(setInterval(function(){if(player.getPlayerState()===1&&player.getCurrentTime()>=config.end-0.15)player.seekTo(config.start,true);},250));},
+onStateChange:function(e){container.classList.toggle("playing",e.data===YT.PlayerState.PLAYING);if(e.data===YT.PlayerState.ENDED){player.seekTo(config.start,true);player.playVideo();}},
+onAutoplayBlocked:function(){container.classList.remove("playing");},
+onError:function(){container.classList.remove("playing");}
+}});
+});
+};
+window.addEventListener("pagehide",function(){timers.forEach(clearInterval);});
+const script=document.createElement("script");script.src="https://www.youtube.com/iframe_api";script.async=true;document.head.appendChild(script);
+})();
+</script>
+</body>
+</html>
