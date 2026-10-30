@@ -38,7 +38,15 @@ section.work{padding:0 10px 7px}
 .meta{margin-bottom:11px;color:#555;font-size:15px}
 .project p{margin-bottom:12px}
 .project .award{color:#333;font-weight:600}
-.entry{margin:0 0 30px}
+.entry{display:grid;grid-template-columns:1fr 2fr;gap:28px;align-items:center;margin:0 0 30px}
+.publication-image{display:grid;place-items:center;aspect-ratio:4/3;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;overflow:hidden;position:relative;color:#999;font-size:14px}
+.publication-image img{position:absolute;width:100%;height:100%;object-fit:contain;background:#fff;padding:8px}
+.project-video{position:relative;aspect-ratio:4/3}
+.project-video>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;padding:0}
+.project-video iframe{position:absolute;inset:0;display:block;width:100%;height:100%;border:0;opacity:0;pointer-events:none}
+.project-video.playing iframe{opacity:1}
+.project-video .video-link{position:absolute;inset:0;z-index:2}
+.project-video .video-link:focus-visible{outline-offset:-4px}
 .entry .authors{margin:6px 0 3px;font-size:15px}
 .entry .venue{margin:0 0 6px;font-size:15px}
 .entry .paper-links{font-size:15px}
@@ -48,7 +56,8 @@ main{padding:30px 22px 16px}
 h1{font-size:33px;margin-bottom:28px}
 .intro{grid-template-columns:1fr;gap:24px;padding:0 0 24px}
 .portrait{width:min(210px,65%);justify-self:center}
-.project{grid-template-columns:1fr;gap:17px}
+.project,.entry{grid-template-columns:1fr;gap:17px}
+.publication-image{width:100%;max-width:300px}
 .project-image{max-width:300px}
 section.work{padding-left:0;padding-right:0}
 }
@@ -84,7 +93,11 @@ section.work{padding-left:0;padding-right:0}
 <section class="work" id="projects" aria-labelledby="projects-heading">
 <h2 id="projects-heading">Projects</h2>
 <article class="project">
-<a class="project-image" href="projects/robocon-2012.html" aria-label="Read about KOSEN Robocon 2012"><img src="assets/field-schematic.svg" alt="Diagram of the Robocon ball-passing and shooting task"></a>
+<div class="project-image project-video" id="robocon-preview">
+<img src="assets/robocon-2012/robot-scoring.jpg" alt="Wanko Kyodai robot with its launching mechanism extended">
+<iframe id="robocon-preview-player" title="Wanko Kyodai robot in the final match" src="https://www.youtube.com/embed/CQqN5mIE10w?autoplay=1&amp;mute=1&amp;playsinline=1&amp;start=251&amp;end=260&amp;controls=0&amp;disablekb=1&amp;enablejsapi=1&amp;rel=0" allow="autoplay; encrypted-media" tabindex="-1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<a class="video-link" href="projects/robocon-2012.html" aria-label="Read about the Wanko Kyodai robot"></a>
+</div>
 <div>
 <h3><a href="projects/robocon-2012.html">KOSEN Robocon 2012: Best Pet</a></h3>
 <p class="meta">Ichinoseki National College of Technology · 2012</p>
@@ -98,20 +111,46 @@ section.work{padding-left:0;padding-right:0}
 <section class="work" id="publications" aria-labelledby="publications-heading">
 <h2 id="publications-heading">Publications</h2>
 <article class="entry">
+<a class="publication-image" href="https://doi.org/10.1038/s41467-018-06270-6" aria-label="Nature Communications paper thumbnail"><span>Research image</span><img src="assets/publications/nature-communications-2018.jpg" alt="Nature Communications paper thumbnail" onerror="this.remove()"></a>
+<div>
 <h3><a href="https://doi.org/10.1038/s41467-018-06270-6">Concyclic CH–π arrays for single-axis rotations of a bowl in a tube</a></h3>
 <p class="authors">Taisuke Matsuno, <strong>Masahiro Fujita</strong>, Kengo Fukunaga, Sota Sato, Hiroyuki Isobe</p>
 <p class="venue"><em>Nature Communications</em>, 2018</p>
-<div class="paper-links"><a href="https://doi.org/10.1038/s41467-018-06270-6">paper</a></div>
+<div class="paper-links"><a href="https://doi.org/10.1038/s41467-018-06270-6">paper</a> <span class="separator" aria-hidden="true">|</span> <a href="https://www.jst.go.jp/pr/announce/20180917/index.html">press release (Japanese)</a></div>
+</div>
 </article>
 <article class="entry">
+<a class="publication-image" href="https://doi.org/10.1246/cl.160258" aria-label="Chemistry Letters paper thumbnail"><span>Research image</span><img src="assets/publications/chemistry-letters-2016.jpg" alt="Chemistry Letters paper thumbnail" onerror="this.remove()"></a>
+<div>
 <h3><a href="https://doi.org/10.1246/cl.160258">Synthesis and Structures of π-Extended [<i>n</i>]Cyclo-<i>para</i>-phenylenes (<i>n</i> = 12, 16, 20) Containing <i>n</i>/2 Nitrogen Atoms</a></h3>
 <p class="authors">Koki Ikemoto, <strong>Masahiro Fujita</strong>, Pei Chui Too, Ya Lin Tnay, Sota Sato, Shunsuke Chiba, Hiroyuki Isobe</p>
 <p class="venue"><em>Chemistry Letters</em>, 45, 658–660, 2016</p>
 <div class="paper-links"><a href="https://doi.org/10.1246/cl.160258">paper</a></div>
+</div>
 </article>
 </section>
 <hr>
 <footer>© 2026 Masahiro Fujita</footer>
 </main>
+<script>
+(function(){
+"use strict";
+let player,timer;
+window.onYouTubeIframeAPIReady=function(){
+player=new YT.Player("robocon-preview-player",{events:{
+onReady:function(e){e.target.mute();e.target.seekTo(251,true);e.target.playVideo();timer=setInterval(function(){if(player.getPlayerState()===1 && player.getCurrentTime()>=259.85)player.seekTo(251,true);},250);},
+onStateChange:function(e){
+const preview=document.getElementById("robocon-preview");
+preview.classList.toggle("playing",e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.BUFFERING);
+if(e.data===YT.PlayerState.ENDED){player.seekTo(251,true);player.playVideo();}
+},
+onAutoplayBlocked:function(){document.getElementById("robocon-preview").classList.remove("playing");},
+onError:function(){document.getElementById("robocon-preview").classList.remove("playing");}
+}});
+};
+window.addEventListener("pagehide",function(){clearInterval(timer);});
+const script=document.createElement("script");script.src="https://www.youtube.com/iframe_api";script.async=true;document.head.appendChild(script);
+})();
+</script>
 </body>
 </html>
