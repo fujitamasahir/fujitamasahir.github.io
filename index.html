@@ -95,6 +95,17 @@ section.work{padding-left:0;padding-right:0}
 <section class="work" id="projects" aria-labelledby="projects-heading">
 <h2 id="projects-heading">Projects</h2>
 <article class="project">
+<div class="project-image project-video" id="h2l-preview">
+<img src="assets/h2l-strawberry/harvesting.jpg" alt="Sciurus17 robot harvesting strawberries" onerror="this.src='https://i.ytimg.com/vi/HqK0_CHvobk/hqdefault.jpg';this.onerror=null">
+<iframe id="h2l-preview-player" title="H2L robot teleoperation for strawberry harvesting" src="https://www.youtube.com/embed/HqK0_CHvobk?autoplay=1&amp;mute=1&amp;playsinline=1&amp;start=67&amp;end=72&amp;controls=0&amp;disablekb=1&amp;enablejsapi=1&amp;rel=0" allow="autoplay; encrypted-media" tabindex="-1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+<a class="video-link" href="projects/h2l-strawberry.html" aria-label="Read about robot teleoperation at H2L"></a>
+</div>
+<div><h3><a href="projects/h2l-strawberry.html">Robot Teleoperation for Remote Strawberry Harvesting</a></h3>
+<p class="meta">H2L Inc. · Sciurus17 robot</p>
+<p>I improved ROS-based control software, motion-teaching AI algorithms, and finger hardware, and supported on-site demonstrations and repairs.</p>
+<a href="projects/h2l-strawberry.html">project page</a></div></article>
+
+<article class="project">
 <div class="project-image project-video" id="robocon-preview">
 <img src="assets/robocon-2012/robot-scoring.jpg" alt="Wanko Kyodai robot with its launching mechanism extended">
 <iframe id="robocon-preview-player" title="Wanko Kyodai robot in the final match" src="https://www.youtube.com/embed/CQqN5mIE10w?autoplay=1&amp;mute=1&amp;playsinline=1&amp;start=251&amp;end=260&amp;controls=0&amp;disablekb=1&amp;enablejsapi=1&amp;rel=0" allow="autoplay; encrypted-media" tabindex="-1" referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -137,20 +148,19 @@ section.work{padding-left:0;padding-right:0}
 <script>
 (function(){
 "use strict";
-let player,timer;
+const timers=[];
 window.onYouTubeIframeAPIReady=function(){
-player=new YT.Player("robocon-preview-player",{events:{
-onReady:function(e){e.target.mute();e.target.seekTo(251,true);e.target.playVideo();timer=setInterval(function(){if(player.getPlayerState()===1 && player.getCurrentTime()>=259.85)player.seekTo(251,true);},250);},
-onStateChange:function(e){
-const preview=document.getElementById("robocon-preview");
-preview.classList.toggle("playing",e.data===YT.PlayerState.PLAYING||e.data===YT.PlayerState.BUFFERING);
-if(e.data===YT.PlayerState.ENDED){player.seekTo(251,true);player.playVideo();}
-},
-onAutoplayBlocked:function(){document.getElementById("robocon-preview").classList.remove("playing");},
-onError:function(){document.getElementById("robocon-preview").classList.remove("playing");}
+[{id:"robocon-preview",start:251,end:260},{id:"h2l-preview",start:67,end:72}].forEach(function(config){
+const container=document.getElementById(config.id);
+let player=new YT.Player(config.id+"-player",{events:{
+onReady:function(e){e.target.mute();e.target.seekTo(config.start,true);e.target.playVideo();timers.push(setInterval(function(){if(player.getPlayerState()===1&&player.getCurrentTime()>=config.end-0.15)player.seekTo(config.start,true);},250));},
+onStateChange:function(e){container.classList.toggle("playing",e.data===YT.PlayerState.PLAYING);if(e.data===YT.PlayerState.ENDED){player.seekTo(config.start,true);player.playVideo();}},
+onAutoplayBlocked:function(){container.classList.remove("playing");},
+onError:function(){container.classList.remove("playing");}
 }});
+});
 };
-window.addEventListener("pagehide",function(){clearInterval(timer);});
+window.addEventListener("pagehide",function(){timers.forEach(clearInterval);});
 const script=document.createElement("script");script.src="https://www.youtube.com/iframe_api";script.async=true;document.head.appendChild(script);
 })();
 </script>
