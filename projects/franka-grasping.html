@@ -1,74 +1,80 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="A controlled MuJoCo study of training-data diversity, Behavior Cloning, DAgger, and residual reinforcement learning for Franka Panda grasping.">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="A controlled simulation study of data diversity, Behavior Cloning, DAgger, and residual reinforcement learning for Franka Panda grasping.">
 <title>Learning Robotic Grasping | Masahiro Fujita</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff;color:#222;font:16px/1.65 Arial,Helvetica,sans-serif}
-main{width:min(900px,100%);margin:auto;padding:35px 30px 24px}a{color:#1772d0;text-decoration:none}a:hover{color:#c77515}a:focus-visible{outline:2px solid #1772d0;outline-offset:4px}
-.back{font-size:14px}header{padding:32px 10px 20px}h1{font-size:34px;line-height:1.2;font-weight:400;margin:0 0 13px}h2{font-size:22px;line-height:1.3;font-weight:600;margin:0 0 14px}p{margin:0 0 15px}.meta{font-size:15px;color:#666;margin-bottom:17px}.tags{font-size:14px;color:#666}
-hr{border:0;height:1px;background:linear-gradient(to right,transparent,#aaa 12%,#aaa 88%,transparent);margin:22px 0 30px}section{padding:0 10px;margin:0 0 30px}
-figure{margin:20px 0 13px}.comparison{display:block;width:100%;height:auto;max-height:520px;object-fit:contain;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa}.caption{font-size:13px;color:#666;line-height:1.55;margin-top:10px}
-.callout{border-left:2px solid #bbb;padding:4px 0 4px 16px;margin:17px 0 22px}.results{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:center}.chart{display:grid;gap:12px}.bar-row{display:grid;grid-template-columns:145px 1fr 54px;gap:10px;align-items:center;font-size:14px}.bar-track{height:12px;border-radius:8px;background:#eee;overflow:hidden}.bar{height:100%;background:#777;border-radius:8px}.bar.wide{background:#1772d0}.small{font-size:13px;color:#666}
-table{border-collapse:collapse;width:100%;font-size:14px;margin:12px 0 17px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #e5e5e5}th{font-weight:600;color:#555}td:last-child,th:last-child{text-align:right}.key{font-weight:600}
+main{width:min(840px,100%);margin:auto;padding:35px 30px 22px}a{color:#1772d0;text-decoration:none}a:hover{color:#c77515}a:focus-visible{outline:2px solid #1772d0;outline-offset:4px}
+.back{font-size:14px}header{text-align:center;padding:30px 0 20px}h1{font-size:36px;line-height:1.25;font-weight:400;margin:0 0 12px}h2{font-size:23px;line-height:1.3;font-weight:600;margin:0 0 17px}p{margin:0 0 16px}.subtitle{color:#666;margin:0 0 13px}.tags{color:#666;font-size:14px}
+hr{border:0;height:1px;background:linear-gradient(to right,transparent,#aaa 15%,#aaa 85%,transparent);margin:22px 0 30px}section{padding:0 10px;margin-bottom:30px}
+.section-no{color:#777;font-size:13px;letter-spacing:.07em;text-transform:uppercase;margin:0 0 9px}
+.facts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin:19px 0 22px}.facts div{border-left:1px solid #ddd;padding-left:15px}.facts dt{color:#777;font-size:13px}.facts dd{margin:3px 0 0;font-size:15px}
 ul{padding-left:22px;margin:0 0 18px}li{margin:5px 0}
-footer{text-align:center;color:#888;font-size:12px;padding:8px 0 16px}
-@media(max-width:650px){main{padding:25px 21px 18px}header{padding:28px 0 18px}h1{font-size:28px}section{padding:0}.results{grid-template-columns:1fr;gap:8px}.bar-row{grid-template-columns:135px 1fr 48px;font-size:13px}}
+.compare-labels{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center;color:#555;font-size:14px;margin:0 0 8px}
+figure{margin:19px 0}.comparison{display:block;width:100%;height:auto;max-height:520px;object-fit:contain;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa}.caption,figcaption{font-size:13px;color:#777;line-height:1.55;margin-top:9px}
+.graph-slot{min-height:120px;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa;display:grid;place-items:center;overflow:hidden;margin:18px 0}.graph-slot img{display:block;width:100%;height:auto}.graph-slot img:not([src]){display:none}.graph-placeholder{color:#888;font-size:14px;padding:20px;text-align:center}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0 12px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #e5e5e5}th{font-weight:600;color:#555}td:last-child,th:last-child{text-align:right}.takeaway{border-left:2px solid #bbb;padding:4px 0 4px 16px;margin:17px 0 20px;font-size:17px}.small{font-size:13px;color:#777}
+footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
+@media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section{padding:0}.facts{grid-template-columns:1fr;gap:10px}.compare-labels{font-size:12px;gap:5px}table{font-size:12px}th,td{padding:7px 5px}}
 </style>
 </head>
 <body><main>
 <a class="back" href="../index.html#projects">← Masahiro Fujita / Projects</a>
 <header>
-<h1>Learning Robotic Grasping: Behavior Cloning, DAgger, and Reinforcement Learning</h1>
-<p class="meta">MuJoCo · Franka Panda · PyTorch · Behavior Cloning · DAgger · Soft Actor-Critic</p>
-<p>I developed a robotic grasping system using a simulated Franka Emika Panda arm in MuJoCo. The robot learns to approach, grasp, and lift a cube from different initial positions.</p>
-<p class="callout"><strong>Research question:</strong> How much does the diversity of training data affect the generalization of imitation learning, compared with more advanced learning methods?</p>
-<p>I investigated this question through Behavior Cloning (BC), Dataset Aggregation (DAgger), and residual reinforcement learning using Soft Actor-Critic (SAC).</p>
+<h1>Learning Robotic Grasping</h1>
+<p class="subtitle">Behavior Cloning, DAgger, and Reinforcement Learning</p>
+<p class="tags">MuJoCo · Franka Panda · PyTorch · Behavior Cloning · DAgger · Soft Actor-Critic</p>
 </header>
 <hr>
-<section aria-labelledby="comparison-heading">
-<h2 id="comparison-heading">A qualitative comparison at an unseen position range</h2>
-<figure>
-<img class="comparison" src="../assets/franka/franka-comparison.gif" alt="Side-by-side evaluation: Narrow Expert BC fails to grasp the cube while Wide Expert BC grasps and lifts it">
-<figcaption class="caption"><strong>Selected illustrative trial</strong> from 200 evaluation trials at an unseen ±20 cm cube-position range (training seed 42). Both policies start from the same cube position. Narrow Expert BC, trained on ±2 cm, fails to grasp the cube; Wide Expert BC, trained on ±12 cm, successfully grasps and lifts it. Across 200 trials and three training seeds, average success rates were <strong>12.2%</strong> and <strong>89.7%</strong>, respectively.</figcaption>
-</figure>
-<p class="small">The animation shows one selected example; the aggregate rates are reported separately below.</p>
+<section aria-labelledby="overview-heading">
+<p class="section-no">01 — Overview &amp; Methodology</p>
+<h2 id="overview-heading">Learning to grasp across changing object positions</h2>
+<p>I developed a simulated Franka Emika Panda system that approaches, grasps, and lifts a cube from different initial positions. My central question was how training-data diversity affects the generalization of imitation learning, compared with adding more complex learning methods.</p>
+<dl class="facts"><div><dt>Environment</dt><dd>MuJoCo simulation</dd></div><div><dt>Robot &amp; task</dt><dd>Franka Panda · cube grasping and lift</dd></div><div><dt>Evaluation</dt><dd>200 trials per position range · 3 seeds</dd></div></dl>
+<p>I first collected 200 successful demonstrations from a rule-based expert controller, randomizing cube positions within ±2 cm. I used them to train a Behavior Cloning (BC) policy, which learns to imitate actions from example demonstrations.</p>
+<p>I then compared two ways of adding training data in a controlled 2 × 2 experiment:</p>
+<ul><li><strong>Expert demonstrations:</strong> Add more actions labeled by the rule-based controller.</li><li><strong>DAgger:</strong> Run the learned policy, query the expert for labels on the states it encounters, and add those examples to training.</li></ul>
+<p>The experiment varied the training-position range (Narrow ±2 cm or Wide ±12 cm) and the additional data method (Expert or single-round DAgger). All four conditions shared the same initial dataset and used matched numbers of additional samples, the same network architecture, and the same training settings.</p>
+<p>Separately, I tested a residual Soft Actor-Critic (SAC) policy on top of a DAgger-trained BC policy. SAC is a reinforcement-learning method that learns a policy by maximizing reward through interaction; in this setup it was used to learn residual adjustments to BC actions.</p>
 </section>
-<section aria-labelledby="methodology-heading">
-<h2 id="methodology-heading">Methodology</h2>
-<p>I collected 200 successful demonstrations from a rule-based expert controller, with cube positions randomized within ±2 cm. These demonstrations trained an initial BC policy.</p>
-<p>To study generalization, I designed a controlled 2 × 2 experiment:</p>
-<ul><li><strong>Training distribution:</strong> Narrow (±2 cm) versus Wide (±12 cm).</li><li><strong>Data collection:</strong> Additional expert demonstrations versus single-round DAgger.</li></ul>
-<p>All four conditions shared the same original dataset. I matched the number of additional training samples and used the same neural network architecture and training settings. Each condition was trained with three random seeds. Every model was evaluated on 200 trials at each of four position ranges: ±2, ±6, ±12, and ±20 cm.</p>
+<hr>
+<section aria-labelledby="controlled-heading">
+<p class="section-no">02 — Controlled Comparison</p>
+<h2 id="controlled-heading">Same cube position · Same camera · Different training distributions</h2>
+<div class="compare-labels"><strong>Narrow Expert BC · trained on ±2 cm</strong><strong>Wide Expert BC · trained on ±12 cm</strong></div>
+<figure>
+<img class="comparison" src="../assets/franka/franka-comparison.gif" alt="Side-by-side comparison: Narrow Expert BC fails to grasp the cube while Wide Expert BC successfully grasps and lifts it">
+<figcaption><strong>Selected illustrative trial</strong> from 200 evaluation trials at the unseen ±20 cm range (training seed 42). Both policies start from the same cube position and use the same camera view. The Narrow policy fails to grasp the cube; the Wide policy grasps and lifts it. Aggregate success rates across all three seeds are shown in the next section.</figcaption>
+</figure>
 </section>
 <hr>
 <section aria-labelledby="results-heading">
-<h2 id="results-heading">Results</h2>
-<p>The largest improvement came from expanding the training-position distribution. At the unseen ±20 cm evaluation range, Wide Expert BC substantially outperformed the other conditions:</p>
-<div class="results">
-<div class="chart" role="img" aria-label="At plus or minus 20 centimeters, Narrow Expert BC succeeded 12.2 percent, Narrow DAgger BC 12.5 percent, Wide Expert BC 89.7 percent, and Wide DAgger BC 71.5 percent.">
-<div class="bar-row"><span>Narrow Expert BC</span><span class="bar-track"><span class="bar" style="display:block;width:12.2%"></span></span><strong>12.2%</strong></div>
-<div class="bar-row"><span>Narrow DAgger BC</span><span class="bar-track"><span class="bar" style="display:block;width:12.5%"></span></span><strong>12.5%</strong></div>
-<div class="bar-row"><span>Wide Expert BC</span><span class="bar-track"><span class="bar wide" style="display:block;width:89.7%"></span></span><strong>89.7%</strong></div>
-<div class="bar-row"><span>Wide DAgger BC</span><span class="bar-track"><span class="bar wide" style="display:block;width:71.5%"></span></span><strong>71.5%</strong></div>
-</div>
-<div><p class="key">At ±12 cm</p><p>Wide Expert BC achieved <strong>100% success across all three training seeds</strong>, compared with <strong>88.7%</strong> for Wide DAgger BC.</p><p class="small">Rates at ±20 cm are averaged across 200 evaluation trials and three training seeds.</p></div>
-</div>
-<p>In a separate preliminary experiment, adding a residual SAC policy to a DAgger-trained BC policy did not improve its measured success rate.</p>
-</section>
-<section aria-labelledby="discussion-heading">
-<h2 id="discussion-heading">Discussion</h2>
-<p>In this specific task, training-data coverage mattered more than adding algorithmic complexity. Single-round DAgger did not consistently improve on additional expert demonstrations; in the Wide condition, it produced lower success rates across all three training seeds.</p>
-<p>One possible explanation is that the expert controller followed a time-based action sequence and was not designed to recover from unsuccessful grasps. This may have reduced the quality of corrective labels collected during DAgger. Further investigation is needed to test this hypothesis.</p>
-<p class="small">These findings are specific to this simulated environment, expert controller, and training procedure. They do not imply that DAgger or reinforcement learning is generally inferior to Behavior Cloning.</p>
+<p class="section-no">03 — Experimental Results</p>
+<h2 id="results-heading">Training coverage improved performance at unseen positions</h2>
+<p>Each condition was trained with three random seeds. Every model was evaluated on 200 trials at each of four cube-position ranges: ±2, ±6, ±12, and ±20 cm. The graph shows the success-rate comparison across all four conditions and ranges.</p>
+<figure>
+<div class="graph-slot"><img src="../assets/franka/franka-success-rates.png" alt="Success-rate graph for Narrow Expert BC, Narrow DAgger BC, Wide Expert BC, and Wide DAgger BC across ±2, ±6, ±12, and ±20 cm cube-position ranges" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="graph-placeholder" hidden>Success-rate graph</span></div>
+<figcaption>Success rates across four test-position ranges. Results cover three training seeds and 200 evaluation trials per range.</figcaption>
+</figure>
+<table><thead><tr><th>Condition</th><th>Training range</th><th>Data added</th><th>Mean success at ±20 cm</th></tr></thead><tbody>
+<tr><td>Narrow Expert BC</td><td>±2 cm</td><td>Expert demonstrations</td><td>12.2%</td></tr>
+<tr><td>Narrow DAgger BC</td><td>±2 cm</td><td>Single-round DAgger</td><td>12.5%</td></tr>
+<tr><td>Wide Expert BC</td><td>±12 cm</td><td>Expert demonstrations</td><td><strong>89.7%</strong></td></tr>
+<tr><td>Wide DAgger BC</td><td>±12 cm</td><td>Single-round DAgger</td><td>71.5%</td></tr>
+</tbody></table>
+<p>At ±12 cm, Wide Expert BC reached 100% success across all three training seeds, compared with 88.7% for Wide DAgger BC. In a separate preliminary experiment, adding residual SAC to a DAgger-trained BC policy did not improve the measured success rate.</p>
+<p class="small">The GIF above is one selected trial, not a summary of the full evaluation. The table and graph report aggregate results.</p>
 </section>
 <hr>
-<section aria-labelledby="takeaway-heading"><h2 id="takeaway-heading">Key takeaway</h2>
-<p class="callout"><strong>Carefully designed training data can matter more than a more complex learning algorithm.</strong></p>
-<p>This project strengthened my understanding of robotic manipulation, imitation learning, reinforcement learning, and the importance of controlled experiments when evaluating AI systems.</p>
-<p class="small">This work evaluates grasping in simulation with the cube's initial position available to the controller; it does not evaluate camera-based perception or real-robot performance.</p>
+<section aria-labelledby="discussion-heading">
+<p class="section-no">04 — Discussion &amp; Key Takeaway</p>
+<h2 id="discussion-heading">Coverage mattered more than complexity in this task</h2>
+<p>Expanding the training-position distribution produced the clearest improvement. Single-round DAgger did not consistently outperform adding expert demonstrations; in the Wide condition, DAgger had lower success rates across all three seeds.</p>
+<p>One possible explanation is that the expert controller followed a time-based action sequence and was not designed to recover from failed grasps. That may have reduced the quality of corrective labels collected during DAgger. Further experiments with a recovery-capable expert and additional DAgger rounds could test this hypothesis.</p>
+<p class="takeaway"><strong>Key takeaway:</strong> Carefully designed training data can matter more than a more complex learning algorithm.</p>
+<p class="small">These findings apply to this simulated environment, expert controller, and training procedure. They do not imply that DAgger or reinforcement learning is generally inferior to Behavior Cloning. The cube's position was available to the controller; camera-based perception and real-robot performance were outside this experiment.</p>
 </section>
 <hr><footer><a href="../index.html#projects">← Back to projects</a><p>© 2026 Masahiro Fujita</p></footer>
 </main></body></html>
