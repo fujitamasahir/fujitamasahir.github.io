@@ -28,15 +28,19 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <p class="tags">MuJoCo · Franka Panda · PyTorch · Behavior Cloning · DAgger · Soft Actor-Critic</p>
 </header>
 <hr>
+<figure class="hero-video">
+<img class="comparison" src="../assets/franka/franka-main.gif" alt="Simulated Franka Panda robot arm approaches a cube, closes its gripper, and lifts the cube">
+<figcaption>A selected successful grasp-and-lift rollout by the Wide Expert BC policy trained with additional demonstrations from the ±12 cm cube-position distribution.</figcaption>
+</figure>
 <section aria-labelledby="overview-heading">
 <p class="section-no">01 — Overview &amp; Methodology</p>
 <h2 id="overview-heading">Learning to grasp across changing object positions</h2>
 <p>I developed a simulated Franka Emika Panda system that approaches, grasps, and lifts a cube from different initial positions. My central question was how training-data diversity affects the generalization of imitation learning, compared with adding more complex learning methods.</p>
-<dl class="facts"><div><dt>Environment</dt><dd>MuJoCo simulation</dd></div><div><dt>Robot &amp; task</dt><dd>Franka Panda · cube grasping and lift</dd></div><div><dt>Evaluation</dt><dd>200 trials per position range · 3 seeds</dd></div></dl>
+<dl class="facts"><div><dt>Environment</dt><dd>MuJoCo simulation</dd></div><div><dt>Robot &amp; task</dt><dd>Franka Panda · cube grasping and lift</dd></div><div><dt>Evaluation</dt><dd>3 training seeds · 200 trials per model per test range</dd></div></dl>
 <p>I first collected 200 successful demonstrations from a rule-based expert controller, randomizing cube positions within ±2 cm. I used them to train a Behavior Cloning (BC) policy, which learns to imitate actions from example demonstrations.</p>
 <p>I then compared two ways of adding training data in a controlled 2 × 2 experiment:</p>
-<ul><li><strong>Expert demonstrations:</strong> Add more actions labeled by the rule-based controller.</li><li><strong>DAgger:</strong> Run the learned policy, query the expert for labels on the states it encounters, and add those examples to training.</li></ul>
-<p>The experiment varied the training-position range (Narrow ±2 cm or Wide ±12 cm) and the additional data method (Expert or single-round DAgger). All four conditions shared the same initial dataset and used matched numbers of additional samples, the same network architecture, and the same training settings.</p>
+<ul><li><strong>Expert demonstrations:</strong> Collect additional demonstrations from the rule-based expert controller.</li><li><strong>DAgger:</strong> Collect states using a mixture of learned-policy and expert actions (10% expert action probability), query the expert for action labels at all visited states, and add those labeled examples to training.</li></ul>
+<p>The experiment varied the training-position range (Narrow ±2 cm or Wide ±12 cm) and the additional data method (Expert or single-round DAgger). All four conditions shared an initial dataset of 200 expert demonstration episodes (23,542 state-action samples). Each condition collected 100 additional episodes, and the additional datasets were subsampled to the same number of state-action samples. The same network architecture and training settings were used across conditions. Matching sample counts does not necessarily match the distribution of states or action phases within those samples.</p>
 <p>Separately, I tested a residual Soft Actor-Critic (SAC) policy on top of a DAgger-trained BC policy. SAC is a reinforcement-learning method that learns a policy by maximizing reward through interaction; in this setup it was used to learn residual adjustments to BC actions.</p>
 </section>
 <hr>
@@ -46,17 +50,17 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <div class="compare-labels"><strong>Narrow Expert BC · trained on ±2 cm</strong><strong>Wide Expert BC · trained on ±12 cm</strong></div>
 <figure>
 <img class="comparison" src="../assets/franka/franka-comparison.gif" alt="Side-by-side comparison: Narrow Expert BC fails to grasp the cube while Wide Expert BC successfully grasps and lifts it">
-<figcaption><strong>Selected illustrative trial</strong> from 200 evaluation trials at the unseen ±20 cm range (training seed 42). Both policies start from the same cube position and use the same camera view. The Narrow policy fails to grasp the cube; the Wide policy grasps and lifts it. Aggregate success rates across all three seeds are shown in the next section.</figcaption>
+<figcaption><strong>Selected illustrative trial</strong> from 200 evaluation trials at the ±20 cm test range, which extends beyond both training distributions (training seed 42). Both policies start from the same cube position and use the same camera view. This example was intentionally selected from cases where Narrow Expert BC failed and Wide Expert BC succeeded, choosing the case with the largest difference in maximum lift height. The Narrow policy fails to complete the grasp-and-lift task, while the Wide policy succeeds. Aggregate success rates across all three training seeds are reported below.</figcaption>
 </figure>
 </section>
 <hr>
 <section aria-labelledby="results-heading">
 <p class="section-no">03 — Experimental Results</p>
-<h2 id="results-heading">Training coverage improved performance at unseen positions</h2>
-<p>Each condition was trained with three random seeds. Every model was evaluated on 200 trials at each of four cube-position ranges: ±2, ±6, ±12, and ±20 cm. The graph shows the success-rate comparison across all four conditions and ranges.</p>
+<h2 id="results-heading">Broader training coverage improved grasping generalization</h2>
+<p>Each condition was trained with three random seeds (42, 123, and 456). Every trained model was evaluated on 200 trials at each of four cube-position ranges: ±2, ±6, ±12, and ±20 cm. The same evaluation seeds and initial cube positions were used across models to enable paired comparisons. The graph shows mean success rates across the three training seeds for all four conditions.</p>
 <figure>
 <div class="graph-slot"><img src="../assets/franka/franka-success-rates.jpg" alt="Success-rate graph for Narrow Expert BC, Narrow DAgger BC, Wide Expert BC, and Wide DAgger BC across ±2, ±6, ±12, and ±20 cm cube-position ranges" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="graph-placeholder" hidden>Success-rate graph</span></div>
-<figcaption>Success rates across four test-position ranges. Results cover three training seeds and 200 evaluation trials per range.</figcaption>
+<figcaption>Mean success rates across three training seeds, with 200 evaluation trials per trained model at each of four test-position ranges.</figcaption>
 </figure>
 <table><thead><tr><th>Condition</th><th>Training range</th><th>Data added</th><th>Mean success at ±20 cm</th></tr></thead><tbody>
 <tr><td>Narrow Expert BC</td><td>±2 cm</td><td>Expert demonstrations</td><td>12.2%</td></tr>
