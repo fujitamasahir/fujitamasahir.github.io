@@ -12,10 +12,10 @@ hr{border:0;height:1px;background:linear-gradient(to right,transparent,#aaa 15%,
 .video{aspect-ratio:16/9;background:#f3f3f3;border-radius:9px;overflow:hidden}.video iframe{display:block;width:100%;height:100%;border:0}
 .video-bar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px}.caption,figcaption{font-size:13px;color:#777;line-height:1.5}.caption{margin:0}
 button{border:1px solid #ddd;border-radius:4px;background:white;color:#1772d0;font:inherit;font-size:14px;padding:3px 12px;cursor:pointer}
-figure{margin:22px 0}.photo-slot{aspect-ratio:16/10;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa;display:grid;place-items:center;overflow:hidden;position:relative}.photo-slot>span{color:#999;font-size:14px;padding:22px;text-align:center}.photo-slot img{display:none;width:100%;height:100%;object-fit:contain}.photo-slot.loaded>span{display:none}.photo-slot.loaded img{display:block}.photo-slot.loaded{aspect-ratio:auto}.photo-slot.loaded img{max-height:520px}figcaption{margin-top:8px}.photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:22px}.photo-pair figure{margin:8px 0 20px}
+figure{margin:22px 0}.photo-slot{aspect-ratio:16/10;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa;display:grid;place-items:center;overflow:hidden;position:relative}.photo-slot>span{color:#999;font-size:14px;padding:22px;text-align:center}.photo-slot img{display:none;width:100%;height:100%;object-fit:contain}.photo-slot.loaded>span{display:none}.photo-slot.loaded img{display:block}.photo-slot.loaded{aspect-ratio:auto}.photo-slot.loaded img{max-height:520px}figcaption{margin-top:8px}.photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:22px}.photo-pair figure{margin:8px 0 20px}.firstvr-pair{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin:22px 0}.firstvr-pair figure{margin:0}.firstvr-pair .photo-slot{aspect-ratio:16/9}.firstvr-pair .photo-slot img{object-fit:contain;background:#fafafa}.firstvr-pair .video{aspect-ratio:16/9}
 .facts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin:0 0 24px}.facts div{border-left:1px solid #ddd;padding-left:15px}.facts dt{color:#777;font-size:13px}.facts dd{margin:3px 0 0;font-size:15px}
 ul{padding-left:22px;margin:0 0 20px}li{margin:5px 0}footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
-@media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section{padding:0}.photo-pair{grid-template-columns:1fr;gap:0}.facts{grid-template-columns:1fr;gap:10px}.video-bar{align-items:flex-start}.caption{max-width:75%}}
+@media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section{padding:0}.photo-pair,.firstvr-pair{grid-template-columns:1fr;gap:0}.firstvr-pair figure{margin:8px 0 20px}.facts{grid-template-columns:1fr;gap:10px}.video-bar{align-items:flex-start}.caption{max-width:75%}}
 </style></head><body><main>
 <a class="back" href="../index.html#projects">← Masahiro Fujita / Projects</a>
 <header><h1>Robot Teleoperation for<br>Remote Strawberry Harvesting</h1><p class="subtitle">H2L Inc. · Software &amp; Hardware Engineering</p>
@@ -32,7 +32,10 @@ ul{padding-left:22px;margin:0 0 20px}li{margin:5px 0}footer{text-align:center;fo
 <p>This project used H2L's BodySharing technology to let people experience strawberry harvesting from a remote location. A person operated a robot at the farm through body movements, while camera feedback helped them observe the task.</p>
 <p>FirstVR, a device worn on the arm, captures movement and force-related information for remote robot control. The system connects a person's actions to a robot working elsewhere, allowing participation in agricultural activities without traveling to the farm.</p>
 <p class="caption">System description paraphrased from <a href="https://h2l.jp/en/product/raraas-en/">H2L's official product overview</a>. This demonstration involves human-operated teleoperation.</p>
+<div class="firstvr-pair" aria-label="FirstVR device and live robot-control demonstration">
 <figure><div class="photo-slot"><span>FirstVR arm-worn device</span><img src="../assets/h2l-strawberry/firstvr.jpg" alt="FirstVR arm-worn device" onload="this.parentElement.classList.add('loaded')" onerror="this.remove()"></div><figcaption>FirstVR, H2L's arm-worn interface for capturing information used in remote operation.</figcaption></figure>
+<figure><div class="video"><iframe id="firstvr-video" title="Human arm movements controlling a robot arm through FirstVR, 0:04–0:17" src="https://www.youtube.com/embed/1uuYgSPtCuY?autoplay=1&amp;mute=1&amp;playsinline=1&amp;start=4&amp;end=17&amp;enablejsapi=1&amp;rel=0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div><figcaption>Arm movements captured by FirstVR, with the robot arm moving in sync. <a href="https://youtu.be/1uuYgSPtCuY?t=4">Watch on YouTube</a>.</figcaption></figure>
+</div>
 </section>
 <hr>
 <section aria-labelledby="contribution-heading"><h2 id="contribution-heading">My contribution</h2>
@@ -63,6 +66,13 @@ let player, timer, paused=false;
 function loop(){if(!player||paused||player.getPlayerState()!==1)return; if(player.getCurrentTime()>=END-0.15){player.seekTo(START,true);}}
 function syncButton(playing){button.textContent=playing?"Pause":"Play";button.setAttribute("aria-label",playing?"Pause highlights":"Play highlights");}
 window.onYouTubeIframeAPIReady=function(){
+const firstvrPlayer=new YT.Player("firstvr-video",{events:{
+onReady:function(e){e.target.mute();e.target.seekTo(4,true);e.target.playVideo();},
+onStateChange:function(e){if(e.data===YT.PlayerState.ENDED){firstvrPlayer.seekTo(4,true);firstvrPlayer.playVideo();}},
+onAutoplayBlocked:function(){},
+onError:function(){}
+}});
+window.setInterval(function(){if(firstvrPlayer&&firstvrPlayer.getPlayerState()===YT.PlayerState.PLAYING&&firstvrPlayer.getCurrentTime()>=16.85){firstvrPlayer.seekTo(4,true);}},250);
 player=new YT.Player("match-video",{events:{
 onReady:function(e){e.target.mute();e.target.seekTo(START,true);e.target.playVideo();timer=window.setInterval(loop,1000/4);},
 onStateChange:function(e){
