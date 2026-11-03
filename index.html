@@ -37,6 +37,8 @@ section.work{padding:0 10px 7px}
 .project{display:grid;grid-template-columns:1fr 2fr;gap:28px;align-items:center;margin-bottom:27px}
 .project-image{display:block;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;overflow:hidden}
 .project-image img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;padding:10px}
+.project-image.franka-thumbnail{aspect-ratio:4/3}
+.project-image.franka-thumbnail img{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;padding:0}
 .meta{margin-bottom:11px;color:#555;font-size:15px}
 .project p{margin-bottom:12px}
 .project .award{color:#333;font-weight:600}
@@ -62,6 +64,7 @@ h1{font-size:33px;margin-bottom:28px}
 .project,.entry{grid-template-columns:1fr;gap:17px}
 .publication-image{width:100%;max-width:300px}
 .project-image{max-width:300px}
+.project-image.franka-thumbnail{width:100%;max-width:none}
 section.work{padding-left:0;padding-right:0}
 }
 @media(prefers-reduced-motion:no-preference){a{transition:color .15s ease}}
@@ -96,7 +99,7 @@ section.work{padding-left:0;padding-right:0}
 <section class="work" id="projects" aria-labelledby="projects-heading">
 <h2 id="projects-heading">Projects</h2>
 <article class="project">
-<a class="project-image" href="projects/franka-grasping.html" aria-label="Open Franka Panda grasping project">
+<a class="project-image franka-thumbnail" href="projects/franka-grasping.html" aria-label="Open Franka Panda grasping project">
 <img src="assets/franka/franka-main.gif" alt="Wide Expert BC robot policy grasping and lifting a cube">
 </a>
 <div><h3><a href="projects/franka-grasping.html">Learning Robotic Grasping: Behavior Cloning, DAgger, and Reinforcement Learning</a></h3>
