@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="A controlled simulation study of data diversity, Behavior Cloning, DAgger, and residual reinforcement learning for Franka Panda grasping.">
+<meta name="description" content="Franka Panda grasping study: BC and DAgger data coverage, controlled residual SAC experiments, and held-out generalization results across training seeds.">
 <title>Learning Robotic Grasping | Masahiro Fujita</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff;color:#222;font:16px/1.65 Arial,Helvetica,sans-serif}
@@ -15,7 +15,7 @@ ul{padding-left:22px;margin:0 0 18px}li{margin:5px 0}
 .compare-labels{display:grid;grid-template-columns:1fr 1fr;gap:12px;text-align:center;color:#555;font-size:14px;margin:0 0 8px}
 figure{margin:19px 0}.comparison{display:block;width:100%;height:auto;max-height:520px;object-fit:contain;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa}.caption,figcaption{font-size:13px;color:#777;line-height:1.55;margin-top:9px}
 .graph-slot{min-height:120px;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa;display:grid;place-items:center;overflow:hidden;margin:18px 0}.graph-slot img{display:block;width:100%;height:auto}.graph-slot img:not([src]){display:none}.graph-placeholder{color:#888;font-size:14px;padding:20px;text-align:center}
-table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0 12px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #e5e5e5}th{font-weight:600;color:#555}td:last-child,th:last-child{text-align:right}.takeaway{border-left:2px solid #bbb;padding:4px 0 4px 16px;margin:17px 0 20px;font-size:17px}.small{font-size:13px;color:#777}
+table{border-collapse:collapse;width:100%;font-size:14px;margin:18px 0 12px}th,td{text-align:left;padding:9px 10px;border-bottom:1px solid #e5e5e5}th{font-weight:600;color:#555}td:last-child,th:last-child{text-align:right}.takeaway{border-left:2px solid #bbb;padding:4px 0 4px 16px;margin:17px 0 20px;font-size:17px}.small{font-size:13px;color:#777}.result-chart{display:block;width:100%;height:auto;border:1px solid #e5e5e5;border-radius:9px;background:#fff}.result-figure{margin:20px 0 26px}.subsection{font-size:19px;line-height:1.4;margin:29px 0 12px;font-weight:600}.note{border-left:2px solid #d3dce5;padding:5px 0 5px 14px;margin:14px 0 22px;color:#555;font-size:14px}.data-link{font-size:14px}.table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}.table-scroll table{min-width:570px}.table-scroll th,.table-scroll td{white-space:nowrap}.metric-strong{font-weight:700;color:#176d60}
 footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 @media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section{padding:0}.facts{grid-template-columns:1fr;gap:10px}.compare-labels{font-size:12px;gap:5px}table{font-size:12px}th,td{padding:7px 5px}}
 </style>
@@ -36,12 +36,20 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <p class="section-no">01 — Overview &amp; Methodology</p>
 <h2 id="overview-heading">Learning to grasp across changing object positions</h2>
 <p>I developed a simulated Franka Emika Panda system that approaches, grasps, and lifts a cube from different initial positions. My central question was how training-data diversity affects the generalization of imitation learning, compared with adding more complex learning methods.</p>
-<dl class="facts"><div><dt>Environment</dt><dd>MuJoCo simulation</dd></div><div><dt>Robot &amp; task</dt><dd>Franka Panda · cube grasping and lift</dd></div><div><dt>Evaluation</dt><dd>3 training seeds · 200 trials per model per test range</dd></div></dl>
+<dl class="facts"><div><dt>Environment</dt><dd>MuJoCo simulation</dd></div><div><dt>Robot &amp; task</dt><dd>Franka Panda · cube grasping and lift</dd></div><div><dt>Evaluation</dt><dd>BC/DAgger: 3 seeds × 200 trials; SAC: 3 seeds × 500/1,000 trials</dd></div></dl>
 <p>I first collected 200 successful demonstrations from a rule-based expert controller, randomizing cube positions within ±2 cm. I used them to train a Behavior Cloning (BC) policy, which learns to imitate actions from example demonstrations.</p>
 <p>I then compared two ways of adding training data in a controlled 2 × 2 experiment:</p>
 <ul><li><strong>Expert demonstrations:</strong> Collect additional demonstrations from the rule-based expert controller.</li><li><strong>DAgger:</strong> Collect states using a mixture of learned-policy and expert actions (10% expert action probability), query the expert for action labels at all visited states, and add those labeled examples to training.</li></ul>
 <p>The experiment varied the training-position range (Narrow ±2 cm or Wide ±12 cm) and the additional data method (Expert or single-round DAgger). All four conditions shared an initial dataset of 200 expert demonstration episodes (23,542 state-action samples). Each condition collected 100 additional episodes, and the additional datasets were subsampled to the same number of state-action samples. The same network architecture and training settings were used across conditions. Matching sample counts does not necessarily match the distribution of states or action phases within those samples.</p>
-<p>Separately, I tested a residual Soft Actor-Critic (SAC) policy on top of a DAgger-trained BC policy. SAC is a reinforcement-learning method that learns a policy by maximizing reward through interaction; in this setup it was used to learn residual adjustments to BC actions.</p>
+<p>I also investigated whether reinforcement learning could improve a <strong>frozen Wide Expert BC</strong> policy beyond its ±12 cm demonstration range. I trained residual Soft Actor-Critic (SAC) policies to adjust the BC controller’s XYZ actions by at most ±5 mm per axis, while leaving gripper control to BC. The BC weights were not fine-tuned.</p>
+<h3 class="subsection">Residual SAC: controlled training conditions</h3>
+<p>Using the same Wide Expert BC checkpoint (training seed 42), I compared three residual SAC training conditions, each with 30,000 interaction steps and SAC training seeds 42, 123, and 456:</p>
+<div class="table-scroll"><table><thead><tr><th>Condition</th><th>Training positions</th><th>Reward</th></tr></thead><tbody>
+<tr><td>A · Uniform + Sparse</td><td>Uniform within ±20 cm</td><td>Sparse task reward</td></tr>
+<tr><td>B · Hard + Sparse</td><td>90% outside ±12 cm; 10% inside</td><td>Sparse task reward</td></tr>
+<tr><td>C · Hard + Shaped</td><td>90% outside ±12 cm; 10% inside</td><td>Sparse + distance/lift progress</td></tr>
+</tbody></table></div>
+<p class="small">“Hard” refers to sampling the outer region of the ±20 cm square, not selecting episodes based on observed BC failures. Best checkpoints were chosen on the same 40 validation seeds (61000–61039). Training data, validation seeds, and subsequent test positions were kept separate.</p>
 </section>
 <hr>
 <section aria-labelledby="controlled-heading">
@@ -56,29 +64,63 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <hr>
 <section aria-labelledby="results-heading">
 <p class="section-no">03 — Experimental Results</p>
-<h2 id="results-heading">Broader training coverage improved grasping generalization</h2>
-<p>Each condition was trained with three random seeds (42, 123, and 456). Every trained model was evaluated on 200 trials at each of four cube-position ranges: ±2, ±6, ±12, and ±20 cm. The same evaluation seeds and initial cube positions were used across models to enable paired comparisons. The graph shows mean success rates across the three training seeds for all four conditions.</p>
-<figure>
-<div class="graph-slot"><img src="../assets/franka/franka-success-rates.jpg" alt="Success-rate graph for Narrow Expert BC, Narrow DAgger BC, Wide Expert BC, and Wide DAgger BC across ±2, ±6, ±12, and ±20 cm cube-position ranges" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="graph-placeholder" hidden>Success-rate graph</span></div>
-<figcaption>Mean success rates across three training seeds, with 200 evaluation trials per trained model at each of four test-position ranges.</figcaption>
-</figure>
-<table><thead><tr><th>Condition</th><th>Training range</th><th>Data added</th><th>Mean success at ±20 cm</th></tr></thead><tbody>
+<h2 id="results-heading">Training coverage and residual RL generalization</h2>
+<h3 class="subsection">Imitation learning: BC versus DAgger</h3>
+<p>Each BC/DAgger condition was trained with three random seeds (42, 123, and 456) and evaluated on 200 trials at each cube-position range (±2, ±6, ±12, and ±20 cm). Matching evaluation positions enabled controlled comparisons.</p>
+<figure><div class="graph-slot"><img src="../assets/franka/franka-success-rates.jpg" alt="Success-rate graph for Narrow Expert BC, Narrow DAgger BC, Wide Expert BC, and Wide DAgger BC across ±2, ±6, ±12, and ±20 cm cube-position ranges" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span class="graph-placeholder" hidden>Success-rate graph</span></div><figcaption>Mean success rates across three BC/DAgger training seeds, with 200 evaluation trials per model at each test range.</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>Condition</th><th>Training range</th><th>Data added</th><th>Success at ±20 cm</th></tr></thead><tbody>
 <tr><td>Narrow Expert BC</td><td>±2 cm</td><td>Expert demonstrations</td><td>12.2%</td></tr>
 <tr><td>Narrow DAgger BC</td><td>±2 cm</td><td>Single-round DAgger</td><td>12.5%</td></tr>
 <tr><td>Wide Expert BC</td><td>±12 cm</td><td>Expert demonstrations</td><td><strong>89.7%</strong></td></tr>
 <tr><td>Wide DAgger BC</td><td>±12 cm</td><td>Single-round DAgger</td><td>71.5%</td></tr>
-</tbody></table>
-<p>At ±12 cm, Wide Expert BC reached 100% success across all three training seeds, compared with 88.7% for Wide DAgger BC. In a separate preliminary experiment, adding residual SAC to a DAgger-trained BC policy did not improve the measured success rate.</p>
-<p class="small">The GIF above is one selected trial, not a summary of the full evaluation. The table and graph report aggregate results.</p>
+</tbody></table></div>
+<p>At ±12 cm, Wide Expert BC achieved 100% success across all three training seeds, compared with 88.7% for Wide DAgger BC. The broader expert-demonstration distribution produced the clearest generalization gains in this setup.</p>
+<h3 class="subsection">Residual SAC: 3 conditions × 3 training seeds</h3>
+<p>I evaluated all nine SAC models on the <strong>same 500 cube positions</strong> (evaluation seeds 120000–120499). The fixed Wide Expert BC baseline succeeded on 456/500 trials (91.2%). The chart shows that SAC performance varied substantially with the training seed.</p>
+<figure class="result-figure"><img class="result-chart" src="../assets/franka/franka-sac-condition-500.svg" alt="Dot plot of A, B, and C residual SAC success rates for training seeds 42, 123, and 456, compared with BC baseline 91.2 percent." loading="lazy"><figcaption>Each colored dot is one trained SAC model; the dark vertical tick marks the mean across three SAC training seeds. The dashed line is the fixed BC baseline.</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>SAC condition</th><th>Seed 42</th><th>Seed 123</th><th>Seed 456</th><th>Mean ± SD</th></tr></thead><tbody>
+<tr><td>A · Uniform + Sparse</td><td>93.6%</td><td>91.6%</td><td>88.2%</td><td>91.13 ± 2.73%</td></tr>
+<tr><td>B · Hard + Sparse</td><td>90.4%</td><td>91.6%</td><td>91.6%</td><td>91.20 ± 0.69%</td></tr>
+<tr><td>C · Hard + Shaped</td><td>91.6%</td><td>91.2%</td><td><strong>94.0%</strong></td><td><strong>92.27 ± 1.51%</strong></td></tr>
+</tbody></table></div>
+<p class="small">Mean ± sample standard deviation across three SAC training seeds. BC is one fixed checkpoint, not three independently trained BC models. The 500-position results were used to identify condition C for follow-up; they should not be treated as its untouched final test.</p>
+<h3 class="subsection">Held-out evaluation: 1,000 new positions</h3>
+<p>After examining the 500-position comparison, I evaluated the three trained C models on <strong>1,000 new, previously unused initial positions</strong> (seeds 130000–130999), without retraining or changing their checkpoints.</p>
+<figure class="result-figure"><img class="result-chart" src="../assets/franka/franka-sac-heldout-1000.svg" alt="Success rate dot plot on 1000 held-out positions: BC 93.9 percent, C seed42 93.6, C seed123 93.1, C seed456 95.7." loading="lazy"><figcaption>On this held-out set, C / Seed 456 reached 957/1,000 successful grasps (95.7%) versus 939/1,000 (93.9%) for BC. Other C training seeds did not improve on BC.</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>Model</th><th>Successes / 1,000</th><th>Success rate</th><th>Δ vs BC</th></tr></thead><tbody>
+<tr><td>Wide Expert BC</td><td>939</td><td>93.9%</td><td>—</td></tr>
+<tr><td>C / Seed 42</td><td>936</td><td>93.6%</td><td>−0.3 pp</td></tr>
+<tr><td>C / Seed 123</td><td>931</td><td>93.1%</td><td>−0.8 pp</td></tr>
+<tr><td><strong>C / Seed 456</strong></td><td><strong>957</strong></td><td><strong>95.7%</strong></td><td class="metric-strong">+1.8 pp</td></tr>
+</tbody></table></div>
+<p>For the fixed C / Seed 456 checkpoint, a paired exact McNemar test found a difference from BC (22 rescues versus 4 regressions; two-sided <em>p</em> ≈ 0.00053). This supports an improvement for that <em>particular trained model</em> on the held-out positions; it does not establish that condition C consistently outperforms BC across training seeds.</p>
+<h3 class="subsection">Generalization inside versus outside the demonstration range</h3>
+<p>The fixed BC policy was trained on demonstrations within ±12 cm. Of the 1,000 held-out test positions, 342 were inside that square and 658 were outside it but within ±20 cm. All models succeeded on all 342 in-range positions; every observed change occurred outside the demonstration range.</p>
+<figure class="result-figure"><img class="result-chart" src="../assets/franka/franka-sac-in-out-1000.svg" alt="In-range grasp success is 100 percent for BC and all C models; outside range BC 90.7 percent, C seed42 90.3, C seed123 89.5, C seed456 93.5." loading="lazy"><figcaption>Inside ±12 cm: all models 342/342. Outside ±12 cm: BC 597/658; C / 42 594/658; C / 123 589/658; C / 456 615/658.</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>Region</th><th>BC</th><th>C / 42</th><th>C / 123</th><th>C / 456</th></tr></thead><tbody>
+<tr><td>Inside ±12 cm (n = 342)</td><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>100.0%</td></tr>
+<tr><td>Outside ±12 cm (n = 658)</td><td>90.7%</td><td>90.3%</td><td>89.5%</td><td><strong>93.5%</strong></td></tr>
+</tbody></table></div>
+<h3 class="subsection">Rescued versus regressed grasps</h3>
+<p>A residual correction can rescue a grasp that BC would have failed, but it can also disrupt an otherwise successful grasp. Pairing each SAC trial with the BC result at the exact same cube position makes this tradeoff visible.</p>
+<figure class="result-figure"><img class="result-chart" src="../assets/franka/franka-sac-rescue-regression.svg" alt="Diverging bar chart: C seed42 rescues 9 and regresses 12; C seed123 rescues 10 and regresses 18; C seed456 rescues 22 and regresses 4." loading="lazy"><figcaption>Rescue = BC failed but BC + SAC succeeded. Regression = BC succeeded but BC + SAC failed. Counts are from the held-out 1,000-position test.</figcaption></figure>
+<div class="table-scroll"><table><thead><tr><th>Model</th><th>Rescued</th><th>Regressed</th><th>Net successful grasps</th></tr></thead><tbody>
+<tr><td>C / Seed 42</td><td>9</td><td>12</td><td>−3</td></tr>
+<tr><td>C / Seed 123</td><td>10</td><td>18</td><td>−8</td></tr>
+<tr><td>C / Seed 456</td><td><strong>22</strong></td><td>4</td><td><strong>+18</strong></td></tr>
+</tbody></table></div>
+<p class="data-link"><a href="https://github.com/fujitamasahir/franka-grasping-learning/tree/experiment/hard-case-residual-sac/bc_results">View evaluation CSVs on GitHub</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/hard-case-residual-sac/EXPERIMENTS_SAC.md">Experimental protocol</a></p>
+<p class="small">The side-by-side GIF above is a deliberately selected illustrative BC trial, not a statistical summary. All SAC figures and tables are calculated from paired evaluation CSVs.</p>
 </section>
 <hr>
 <section aria-labelledby="discussion-heading">
 <p class="section-no">04 — Discussion &amp; Key Takeaway</p>
-<h2 id="discussion-heading">Coverage mattered more than complexity in this task</h2>
-<p>Expanding the training-position distribution produced the clearest improvement. Single-round DAgger did not consistently outperform adding expert demonstrations; in the Wide condition, DAgger had lower success rates across all three seeds.</p>
-<p>One possible explanation is that the expert controller followed a time-based action sequence and was not designed to recover from failed grasps. That may have reduced the quality of corrective labels collected during DAgger. Further experiments with a recovery-capable expert and additional DAgger rounds could test this hypothesis.</p>
-<p class="takeaway"><strong>Key takeaway:</strong> Carefully designed training data can matter more than a more complex learning algorithm.</p>
-<p class="small">These findings apply to this simulated environment, expert controller, and training procedure. They do not imply that DAgger or reinforcement learning is generally inferior to Behavior Cloning. The cube's position was available to the controller; camera-based perception and real-robot performance were outside this experiment.</p>
+<h2 id="discussion-heading">Data coverage helped; residual RL was seed-sensitive</h2>
+<p><strong>Imitation learning:</strong> Expanding the expert-demonstration position range from ±2 cm to ±12 cm was the most reliable improvement in the BC/DAgger comparison. Single-round DAgger did not consistently outperform collecting additional expert demonstrations, especially in the Wide condition. The time-based expert controller lacked an explicit recovery strategy, which may have limited the value of corrective labels collected during DAgger.</p>
+<p><strong>Residual reinforcement learning:</strong> SAC could recover some failures outside the BC demonstration range without changing the BC network. Hard-case sampling with shaped rewards (condition C) had the highest mean success on the 500-position comparison, but the three SAC training seeds differed. On the new 1,000-position test, C / Seed 456 improved from 93.9% (BC) to 95.7%, while C / Seeds 42 and 123 fell slightly below BC. The mean across the three C models was 94.13%, only 0.23 percentage points above BC.</p>
+<p><strong>Next question:</strong> How can a residual controller learn <em>when</em> a correction is beneficial, preserving BC's successful behavior while rescuing its failures? More training seeds, stronger baselines, and explicit safeguards against harmful corrections are needed before claiming a consistently better learning method.</p>
+<p class="takeaway"><strong>Key takeaway:</strong> Broader demonstrations substantially improved imitation-learning generalization. Residual RL showed promising out-of-distribution corrections in selected runs, but training stability and avoiding regressions remain open challenges.</p>
+<p class="small">Scope: MuJoCo simulation, known cube positions, one fixed Wide Expert BC checkpoint for SAC, three SAC training seeds, and a limited grasp-and-lift task. These findings do not establish real-robot performance or the general superiority of BC, DAgger, or SAC. The held-out 1,000-position set was evaluated after condition C was selected using the 500-position comparison.</p>
 </section>
 <hr><footer><a href="../index.html#projects">← Back to projects</a><p>© 2026 Masahiro Fujita</p></footer>
 </main></body></html>
