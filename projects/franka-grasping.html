@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Franka Panda grasping: how imitation-learning data coverage and residual SAC affect generalization. Controlled BC/DAgger comparisons and held-out tests across learning seeds.">
+<meta name="description" content="Franka Panda robotic grasping: imitation learning, BC/DAgger data coverage, residual SAC, and selective reinforcement learning that preserves successful grasps.">
 <title>Learning Robotic Grasping | Masahiro Fujita</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff;color:#222;font:16px/1.65 Arial,Helvetica,sans-serif}
@@ -20,6 +20,14 @@ details{border:1px solid #e5e5e5;border-radius:9px;margin:19px 0;background:#fff
 summary{cursor:pointer;padding:13px 17px;font-size:14px;font-weight:600;color:#1772d0;list-style:revert}
 details[open] summary{border-bottom:1px solid #e5e5e5} .detail-body{padding:12px 16px 16px}.detail-body figure{margin:12px 0 20px}.detail-body p{font-size:14px}
 .statline{font-size:15px;color:#555}.sources{font-size:14px;margin-top:16px}
+.table-scroll{overflow-x:auto;margin:16px 0 8px;border:1px solid #e5e5e5;border-radius:9px}
+.results-table{border-collapse:collapse;width:100%;min-width:610px;font-size:14px;line-height:1.5}
+.results-table th,.results-table td{padding:11px 13px;border-bottom:1px solid #e9edf0;text-align:left;white-space:nowrap}
+.results-table th{font-weight:600;background:#fafafa;color:#555;font-size:13px}
+.results-table td:not(:first-child),.results-table th:not(:first-child){text-align:right}
+.results-table tr:last-child td{border-bottom:0}
+.results-table .highlight td:first-child{font-weight:600}
+.results-table caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 @media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section,.abstract{padding:0}.methods{grid-template-columns:1fr;gap:7px}.method{padding:10px 12px}.comparison{max-height:310px}summary{padding:12px}}
 </style>
@@ -28,14 +36,14 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <a class="back" href="../index.html#projects">← Masahiro Fujita / Projects</a>
 <header>
 <h1>Learning Robotic Grasping</h1>
-<p class="subtitle">Behavior Cloning, DAgger, and Reinforcement Learning</p>
-<p class="tags">MuJoCo · Franka Panda · PyTorch · BC · DAgger · SAC</p>
+<p class="subtitle">Imitation Learning, DAgger, and Selective Residual Reinforcement Learning</p>
+<p class="tags">MuJoCo · Franka Panda · PyTorch · BC · DAgger · SAC · Policy Gating</p>
 </header>
 <hr>
 <section class="abstract" aria-labelledby="abstract-heading">
 <h2 id="abstract-heading">Abstract</h2>
-<p>How can a robot grasp objects beyond the positions shown in demonstrations? I studied imitation learning and residual reinforcement learning with a simulated Franka Panda. Broadening expert-demonstration coverage from ±2 cm to ±12 cm raised Behavior Cloning (BC) success at the ±20 cm test range from <strong>12.2% to 89.7%</strong> (three-seed means). I then added residual Soft Actor-Critic (SAC) corrections to a frozen Wide Expert BC policy. On 1,000 new test positions, one SAC training seed reached <strong>95.7%</strong> success versus <strong>93.9%</strong> for BC, but two other seeds did not improve. The study highlights both the value of data coverage and the instability of residual RL.</p>
-<p class="facts">Simulated grasp-and-lift task · Known cube positions · Three training seeds per condition</p>
+<p>How can a robot grasp objects beyond demonstrated positions—and know when reinforcement learning should intervene? In a simulated Franka Panda task, widening expert demonstrations from ±2 cm to ±12 cm increased Behavior Cloning (BC) success at the ±20 cm test range from <strong>12.2% to 89.7%</strong> (three-seed means). Residual Soft Actor-Critic (SAC) sometimes improved a frozen BC policy, but results varied across SAC training seeds. I therefore developed a <strong>selective gate</strong> that applies SAC only in calibrated regions. On <strong>2,000 new, matched test positions</strong>, the safety-oriented gate rescued <strong>25 BC failures with zero observed regressions</strong>, reaching 94.20% success versus 92.95% for BC while activating SAC in only 14.8% of trials. A more permissive gate reached 95.10% (44 rescues, one regression). These gate results use one selected SAC training seed; multi-seed validation is the next step.</p>
+<p class="facts">Simulated grasp-and-lift task · Known cube positions · Frozen BC + SAC models · Paired evaluation</p>
 </section>
 <figure><img class="comparison" src="../assets/franka/franka-main.gif" alt="Franka Panda robot arm grasps and lifts a cube in MuJoCo"><figcaption>Illustrative successful rollout of the Wide Expert BC policy.</figcaption></figure>
 <hr>
@@ -85,14 +93,55 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </details>
 </section>
 <hr>
+<section aria-labelledby="gate-heading">
+<p class="section-no">04 — Selective Residual Reinforcement Learning</p>
+<h2 id="gate-heading">Can SAC correct failures without disrupting successes?</h2>
+<p>Always applying SAC can rescue BC failures, but it can also turn successful grasps into failures. I tested a simple <strong>episode-level spatial gate</strong>: keep BC unchanged inside its ±12 cm demonstration range, and activate SAC only in outer regions where paired calibration trials suggested a net benefit. The BC and SAC model weights remain frozen.</p>
+<div class="methods" aria-label="Selective control strategies">
+<div class="method"><strong>BC Only</strong><span>No RL correction</span></div>
+<div class="method"><strong>Safety Gate</strong><span>Use SAC only in the calibrated EN (+x, +y) region</span></div>
+<div class="method"><strong>Balanced Gate</strong><span>Use SAC in calibrated EN and WS (−x, −y) regions</span></div>
+</div>
+<p>I calibrated both gates using <strong>500 paired trials</strong> (seeds 120000–120499), then froze the rules before testing on <strong>2,000 previously unused, matched positions</strong> (seeds 150000–151999). All four methods used the same fixed Wide Expert BC model; the SAC controller was Condition C, training seed 456.</p>
+<figure><img class="result-chart" src="../assets/franka/franka-selective-gate-2000.svg" alt="Success rates on 2,000 unseen positions: BC only 92.95%, always SAC 94.95%, safety gate 94.20%, and balanced gate 95.10%." loading="lazy"><figcaption>Frozen-gate evaluation on 2,000 new cube positions. The Safety Gate improved over BC while using SAC on only 14.8% of trials. The Balanced Gate achieved the highest observed success rate, but its difference from always-on SAC was not statistically established.</figcaption></figure>
+<div class="table-scroll"><table class="results-table">
+<caption>Paired selective residual SAC results on 2,000 test positions</caption>
+<thead><tr><th scope="col">Controller</th><th scope="col">Success</th><th scope="col">Rescue / Regression</th><th scope="col">SAC used</th></tr></thead>
+<tbody>
+<tr><td>BC only</td><td>1,859 / 2,000 (92.95%)</td><td>—</td><td>0%</td></tr>
+<tr><td>Always SAC</td><td>1,899 / 2,000 (94.95%)</td><td>53 / 13</td><td>100%</td></tr>
+<tr class="highlight"><td>Safety Gate</td><td>1,884 / 2,000 (94.20%)</td><td>25 / 0</td><td>14.8%</td></tr>
+<tr class="highlight"><td>Balanced Gate</td><td>1,902 / 2,000 (95.10%)</td><td>44 / 1</td><td>30.7%</td></tr>
+</tbody></table></div>
+<p class="small">Rescue: BC fails but BC + SAC succeeds. Regression: BC succeeds but BC + SAC fails. The gate makes its choice from the cube's <em>initial position</em>, not by observing whether BC will succeed. Zero observed regressions is not a safety guarantee.</p>
+<p class="takeaway"><strong>Finding 3:</strong> The Safety Gate preserved all 1,859 successful BC grasps in this test and rescued 25 additional failures. The Balanced Gate achieved 95.10% success with 69.3% fewer SAC activations than always-on SAC; its 0.15-point advantage in success rate over always-on SAC was not significant (paired exact McNemar, <em>p</em> ≈ 0.664).</p>
+<details>
+<summary>Where did SAC help or hurt? (regional breakdown)</summary>
+<div class="detail-body">
+<p>The SAC effect was strongly position-dependent. In the EN quadrant, SAC rescued all 25 BC failures without regressions; in ES, it introduced more failures than it rescued. The gate uses these spatial patterns, not a learned failure detector.</p>
+<div class="table-scroll"><table class="results-table">
+<caption>Always-on SAC compared with BC, by initial cube region</caption>
+<thead><tr><th scope="col">Region</th><th scope="col">Positions</th><th scope="col">BC successes</th><th scope="col">SAC successes</th><th scope="col">Rescue / Regression</th></tr></thead>
+<tbody>
+<tr><td>Inside ±12 cm</td><td>750</td><td>750</td><td>750</td><td>0 / 0</td></tr>
+<tr><td>EN (+x, +y)</td><td>296</td><td>271</td><td>296</td><td>25 / 0</td></tr>
+<tr><td>WS (−x, −y)</td><td>318</td><td>281</td><td>299</td><td>19 / 1</td></tr>
+<tr><td>WN (−x, +y)</td><td>316</td><td>262</td><td>266</td><td>5 / 1</td></tr>
+<tr><td>ES (+x, −y)</td><td>320</td><td>295</td><td>288</td><td>4 / 11</td></tr>
+</tbody></table></div>
+</div>
+</details>
+</section>
+<hr>
 <section aria-labelledby="discussion-heading">
-<p class="section-no">04 — Discussion &amp; Key Takeaway</p>
-<h2 id="discussion-heading">Better demonstrations first; smarter corrections next</h2>
-<p><strong>Data coverage</strong> was the clearest, most consistent improvement. Single-round DAgger was not better than additional expert demonstrations in this task; the time-based expert’s limited recovery behavior may have constrained DAgger’s corrective labels.</p>
-<p><strong>Residual SAC</strong> sometimes extended BC performance beyond the demonstration range, but results depended on the training seed. The selected Seed 456 checkpoint improved on BC in the held-out test (paired McNemar exact test, <em>p</em> ≈ 0.00053), yet the other two C seeds did not. This is evidence for one successful learned controller, <em>not</em> proof that the training method reliably improves BC.</p>
-<p class="takeaway"><strong>Next question:</strong> Can a robot learn when to apply a correction, rescuing failed grasps without disrupting already successful behavior?</p>
-<p class="small">Limitations: simulation only; cube positions were provided to the controller; no camera-based perception or real-robot validation. SAC used one fixed BC checkpoint and three training seeds. The final 1,000-position test was run after choosing C using the 500-position comparison.</p>
-<p class="sources"><a href="https://github.com/fujitamasahir/franka-grasping-learning/tree/experiment/hard-case-residual-sac/bc_results">Evaluation data (CSV)</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/hard-case-residual-sac/EXPERIMENTS_SAC.md">Experimental protocol</a></p>
+<p class="section-no">05 — Discussion &amp; Key Takeaway</p>
+<h2 id="discussion-heading">Broad demonstrations first; selective corrections next</h2>
+<p><strong>Imitation Learning:</strong> Expanding expert-demonstration coverage produced the most consistent improvement. In this setup, one DAgger round did not outperform adding wide expert data; limited recovery behavior in the time-based expert may have constrained DAgger's corrective labels.</p>
+<p><strong>Residual RL:</strong> Adding SAC corrections can improve out-of-distribution grasps, but the three SAC training seeds produced inconsistent results. A single successful SAC checkpoint does not establish reliable improvement across training runs.</p>
+<p><strong>Selective RL:</strong> On a separate 2,000-position test, a fixed spatial gate reduced unnecessary SAC activations and prevented observed regressions in its safety-oriented configuration. These results establish a promising <em>position-based intervention strategy for one selected SAC checkpoint</em>, not a generally reliable failure predictor.</p>
+<p class="takeaway"><strong>Next research question:</strong> Can a robot predict when its imitation-learned policy needs help from the current state—and selectively apply RL corrections without sacrificing reliable behavior?</p>
+<p class="small">Limitations: simulation only; known cube positions rather than camera perception; no real-robot tests. The spatial gate uses the initial cube position, not online uncertainty or predicted BC failure. Selective-gate results currently use one SAC training seed; evaluation across the other training seeds is in progress.</p>
+<p class="sources"><a href="https://github.com/fujitamasahir/franka-grasping-learning/tree/experiment/selective-residual-gate/bc_results">Evaluation data (CSV)</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/selective-residual-gate/EXPERIMENTS_SELECTIVE_GATE.md">Selective-gate protocol</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/hard-case-residual-sac/EXPERIMENTS_SAC.md">SAC protocol</a></p>
 </section>
 <hr><footer><a href="../index.html#projects">← Back to projects</a><p>© 2026 Masahiro Fujita</p></footer>
 </main></body></html>
