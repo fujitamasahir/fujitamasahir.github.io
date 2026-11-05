@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Franka Panda grasping research: behavior cloning, DAgger, residual SAC, policy-specific gates, and training stability across multiple random seeds in MuJoCo.">
+<meta name="description" content="Franka Panda grasping research: imitation learning, residual SAC, selective gating, training stability, and controlled regularization experiments in MuJoCo.">
 <title>Learning Robotic Grasping | Masahiro Fujita</title>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#fff;color:#222;font:16px/1.65 Arial,Helvetica,sans-serif}
@@ -44,7 +44,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <hr>
 <section class="abstract" aria-labelledby="abstract-heading">
 <h2 id="abstract-heading">Abstract</h2>
-<p>How can a robot grasp objects beyond demonstrated positions, and when should reinforcement learning intervene? In a simulated Franka Panda task, widening expert demonstrations from ±2 cm to ±12 cm improved Behavior Cloning (BC) success at the ±20 cm test range from <strong>12.2% to 89.7%</strong> (three-seed means). I added residual Soft Actor-Critic (SAC) corrections and tested spatial gates that selectively activate them. A promising gate worked for one SAC checkpoint but <strong>did not consistently transfer</strong> across training seeds. Per-policy calibration avoided observed regressions in a five-seed test, largely by <strong>falling back to BC for four models</strong>. A subsequent training-stability study showed that SAC success varied substantially by seed and training step. The central challenge is now <strong>learning reliable corrections</strong>, not just deciding when to use them.</p>
+<p>How can a robot grasp objects beyond demonstrated positions, and when should reinforcement learning intervene? In a simulated Franka Panda task, widening expert demonstrations from ±2 cm to ±12 cm improved Behavior Cloning (BC) success at the ±20 cm test range from <strong>12.2% to 89.7%</strong> (three-seed means). I added residual Soft Actor-Critic (SAC) corrections and tested spatial gates that selectively activate them. A promising gate worked for one SAC checkpoint but <strong>did not consistently transfer</strong> across training seeds. Per-policy calibration avoided observed regressions in a five-seed test, largely by <strong>falling back to BC for four models</strong>. A training-stability study showed that SAC success varied by seed and training step. In a subsequent controlled experiment, stronger residual-action regularization reduced average regressions at 30k, but its advantage nearly disappeared after checkpoint selection and some models became worse. The central challenge is now <strong>reliably rescuing BC failures without disrupting successful grasps</strong>.</p>
 <p class="facts">MuJoCo simulation · Franka Panda · Frozen BC · Paired evaluations · Independent SAC training seeds</p>
 </section>
 <figure><img class="comparison" src="../assets/franka/franka-main.gif" alt="Franka Panda robot arm grasps and lifts a cube in MuJoCo"><figcaption>Illustrative successful rollout of the Wide Expert BC policy.</figcaption></figure>
@@ -209,15 +209,53 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <p class="small">Five SAC training seeds and one shared 2,000-position test set limit generalization. All checkpoint choices were frozen before final evaluation. Candidate causes—including exploration, critic approximation, replay-buffer composition, and entropy dynamics—remain hypotheses, not experimentally identified mechanisms.</p>
 </section>
 <hr>
+<section aria-labelledby="regularization-heading">
+<p class="section-no">08 — Controlling SAC Regressions</p>
+<h2 id="regularization-heading">Can smaller RL corrections prevent failed grasps?</h2>
+<p>After finding unstable SAC training, I tested a <strong>controlled change to the learning reward</strong>. Arm A kept the original residual-action penalty coefficient (<strong>0.005</strong>); Arm B used a stronger penalty (<strong>0.020</strong>). Everything else—including frozen BC, SAC training settings, and the ±5 mm per-axis correction limit—was held fixed. I trained <strong>five new SAC seeds</strong> (907, 911, 919, 929, 937) per arm and evaluated both arms on the same <strong>2,000 new cube positions</strong> per model. The shared BC baseline was <strong>92.10%</strong>.</p>
+<figure>
+<div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-sac-regression-final.svg" alt="Final success-rate comparison for five SAC training seeds, showing BC Only, original-penalty Arm A at 30k and selected checkpoints, and stronger-penalty Arm B at 30k and selected checkpoints." loading="lazy"></div>
+<figcaption>Final success rates across five training seeds, separating fixed 30k checkpoints from validation-selected checkpoints. The two comparisons answer different questions.</figcaption>
+</figure>
+<div class="table-scroll"><table class="results-table">
+<caption>Fixed 30k checkpoint comparison: success rates and paired rescue/regression counts on 2,000 shared positions per seed</caption>
+<thead><tr><th scope="col">SAC seed</th><th scope="col">Arm A success</th><th scope="col">Arm B success</th><th scope="col">A rescue / regression</th><th scope="col">B rescue / regression</th></tr></thead>
+<tbody>
+<tr><td>907</td><td>94.90%</td><td>95.60%</td><td>60 / 4</td><td>71 / 1</td></tr>
+<tr><td>911</td><td>79.95%</td><td>91.00%</td><td>15 / 258</td><td>52 / 74</td></tr>
+<tr><td>919</td><td>91.80%</td><td>90.80%</td><td>54 / 60</td><td>23 / 49</td></tr>
+<tr><td>929</td><td>84.45%</td><td>89.95%</td><td>4 / 157</td><td>19 / 62</td></tr>
+<tr><td>937</td><td>95.50%</td><td>93.10%</td><td>68 / 0</td><td>36 / 16</td></tr>
+<tr class="highlight"><td>Five-seed mean</td><td>89.32%</td><td>92.09%</td><td>40.2 / 95.8</td><td>40.2 / 40.4</td></tr>
+</tbody></table></div>
+<figure>
+<div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-sac-regression-rescue.svg" alt="Rescue and regression counts for five training seeds comparing original regularization Arm A against stronger regularization Arm B at 30k steps. Stronger regularization reduced regressions for four seeds but worsened seed 937." loading="lazy"></div>
+<figcaption>Rescue = a BC failure corrected by SAC; regression = a BC success turned into failure by SAC. Stronger regularization reduced regressions for four of five training seeds, but the effect was not universal.</figcaption>
+</figure>
+<p>At the fixed <strong>30k</strong> checkpoint, stronger regularization increased mean success from <strong>89.32% to 92.09%</strong> (+2.77 percentage points) and reduced mean regressions from <strong>95.8 to 40.4</strong> per 2,000 trials. Mean rescues remained <strong>40.2</strong>, but individual seeds behaved differently: Seed 911 improved markedly, while Seed 937 dropped from <strong>95.50% to 93.10%</strong>. Mean residual action norm also fell from <strong>4.06 to 3.12 mm</strong>, and action saturation from <strong>7.13% to 4.48%</strong>.</p>
+<h3>Does stronger regularization still help after checkpoint selection?</h3>
+<p>I separately selected each model's checkpoint using <strong>500 validation positions</strong>, then evaluated the frozen choices on the same untouched 2,000-position final set. The mean success-rate difference nearly vanished:</p>
+<div class="table-scroll"><table class="results-table">
+<caption>Five-seed means after validation-based checkpoint selection; BC baseline 92.10%</caption>
+<thead><tr><th scope="col">Method</th><th scope="col">Mean success</th><th scope="col">Mean rescues</th><th scope="col">Mean regressions</th></tr></thead>
+<tbody>
+<tr><td>Arm A · selected</td><td>93.17%</td><td>41.6</td><td>20.2</td></tr>
+<tr><td>Arm B · selected</td><td>93.19%</td><td>28.2</td><td>6.4</td></tr>
+</tbody></table></div>
+<p>Arm B still had fewer regressions, but it also rescued fewer BC failures. Region-level analysis revealed another trade-off: across the five fixed-30k models, stronger regularization reduced regressions in <strong>WS (326 → 62)</strong> but increased them in <strong>ES (1 → 95)</strong>. These totals reuse the same test positions across models and are <em>descriptive</em>, not independent samples.</p>
+<p class="takeaway"><strong>Finding 7:</strong> Stronger residual-action regularization can suppress harmful corrections, but it is <strong>not uniformly beneficial</strong>. Its mean 30k advantage over the original penalty was large, whereas its advantage after validation-based checkpoint selection was only <strong>+0.02 percentage points</strong>. The next step is an independent-seed replication focused on both <strong>rescue retention</strong> and <strong>regression prevention</strong>, before building an adaptive gate.</p>
+<p class="small">Controlled MuJoCo study, five paired SAC training seeds, 500 validation positions (230000–230499), and 2,000 separate final positions (240000–241999). Exact paired McNemar tests with Holm adjustment found seed-dependent differences, not a universal improvement. Lower residual magnitude is an observed association, not proof of the mechanism; no real-robot or camera-based evaluation was performed.</p>
+</section>
+<hr>
 <section aria-labelledby="discussion-heading">
-<p class="section-no">08 — Discussion &amp; Key Takeaway</p>
+<p class="section-no">09 — Discussion &amp; Key Takeaway</p>
 <h2 id="discussion-heading">Data coverage first; reliable corrections next</h2>
 <p><strong>Imitation Learning:</strong> Expanding expert-demonstration coverage produced the most consistent improvement. In this setup, one DAgger round did not outperform adding wide expert data; limited recovery behavior in the time-based expert may have constrained DAgger's corrective labels.</p>
-<p><strong>Residual RL:</strong> SAC sometimes rescued many BC failures, but new experiments across five training seeds and 10k/20k/30k checkpoints revealed large changes in success and regression rates. Training longer did not consistently help, and checkpoint selection remained uncertain.</p>
+<p><strong>Residual RL:</strong> SAC rescued many BC failures in some runs, but success and regression rates varied across training seeds and checkpoints. Increasing the residual-action penalty reduced regressions in four of five new seeds at 30k, yet could also remove useful rescues. After validation-based checkpoint selection, the two penalty settings had almost identical mean success rates.</p>
 <p><strong>Selective RL:</strong> A fixed spatial gate helped one selected SAC checkpoint but did not transfer consistently. Policy-specific gates avoided observed regressions in a five-seed evaluation, largely because four gates never activated SAC. This highlights the trade-off between avoiding harmful interventions and making useful corrections.</p>
-<p class="takeaway"><strong>Next research question:</strong> What causes residual SAC training to become regressive, and can a controlled change to its learning objective reduce harmful corrections across independently trained models? Once the underlying policies improve reliably, I plan to revisit adaptive gating based on online observations.</p>
-<p class="small">Limitations: simulation only; known cube positions rather than camera perception; no real-robot tests. All gates use initial cube position, not online uncertainty or predicted BC failure. The policy-specific procedure was tested on five newly trained SAC models, and training stability on five additional models; both studies remain limited by small numbers of training seeds and shared evaluation positions.</p>
-<p class="sources"><a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/sac-training-stability/EXPERIMENTS_SAC_TRAINING_STABILITY.md">SAC stability report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/sac-training-stability/EXPERIMENTS_POLICY_SPECIFIC_GATE.md">Policy-specific gate report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/selective-residual-gate/EXPERIMENTS_SELECTIVE_MULTISEED.md">Fixed-gate multi-seed report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/tree/experiment/sac-training-stability/bc_results">Evaluation data (CSV/JSON)</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/hard-case-residual-sac/EXPERIMENTS_SAC.md">SAC protocol</a></p>
+<p class="takeaway"><strong>Next research question:</strong> Does the rescue–regression trade-off between weak and strong residual-action penalties replicate across new independent SAC training seeds, especially in the ES and WS regions? I plan to confirm this before exploring an adaptive gate that uses online observations.</p>
+<p class="small">Limitations: simulation only; known cube positions rather than camera perception; no real-robot tests. All gates use initial cube position, not online uncertainty or predicted BC failure. The policy-specific, training-stability, and regularization studies each used small numbers of training seeds and shared evaluation positions within each study; their results do not establish general robustness.</p>
+<p class="sources"><a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/sac-regression-diagnostics/EXPERIMENTS_SAC_REGRESSION_CONTROL.md">SAC regression control report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/sac-training-stability/EXPERIMENTS_SAC_TRAINING_STABILITY.md">SAC stability report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/sac-training-stability/EXPERIMENTS_POLICY_SPECIFIC_GATE.md">Policy-specific gate report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/selective-residual-gate/EXPERIMENTS_SELECTIVE_MULTISEED.md">Fixed-gate multi-seed report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/tree/experiment/sac-regression-diagnostics/bc_results">Latest evaluation data (CSV/JSON)</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/hard-case-residual-sac/EXPERIMENTS_SAC.md">SAC protocol</a></p>
 </section>
 <hr><footer><a href="../index.html#projects">← Back to projects</a><p>© 2026 Masahiro Fujita</p></footer>
 </main></body></html>
