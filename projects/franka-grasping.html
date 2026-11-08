@@ -51,7 +51,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <figure><img class="comparison" src="../assets/franka/franka-main.gif" alt="Franka Panda robot arm grasps and lifts a cube in MuJoCo"><figcaption>Illustrative successful rollout of the Wide Expert BC policy.</figcaption></figure>
 <hr>
 <section aria-labelledby="baseline-heading">
-<p class="section-no">01 — Imitation Learning</p>
+<p class="section-no">01 / Imitation Learning</p>
 <h2 id="baseline-heading">First, does training-data coverage matter?</h2>
 <p>I began with 200 expert demonstrations at ±2 cm. I compared adding 100 episodes from either the expert controller or single-round <strong>DAgger</strong> (states visited by the learned policy, labeled with expert actions). Additional data came from a <strong>Narrow (±2 cm)</strong> or <strong>Wide (±12 cm)</strong> position range. The four conditions used the same model architecture and matched additional sample counts.</p>
 <figure>
@@ -63,7 +63,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="sac-heading">
-<p class="section-no">02 — Residual Reinforcement Learning</p>
+<p class="section-no">02 / Residual Reinforcement Learning</p>
 <h2 id="sac-heading">Can SAC improve a strong BC policy?</h2>
 <p>I froze the Wide Expert BC model (training seed 42) and trained SAC to add small XYZ corrections (up to ±5 mm per axis). BC still controlled the gripper. Each SAC run used 30,000 interaction steps; three SAC training seeds were tested per condition.</p>
 <div class="methods" aria-label="Residual SAC training conditions">
@@ -82,8 +82,8 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="evaluation-heading">
-<p class="section-no">03 — SAC Checkpoint Comparison</p>
-<h2 id="evaluation-heading">A promising improvement—but not across every seed</h2>
+<p class="section-no">03 / SAC Checkpoint Comparison</p>
+<h2 id="evaluation-heading">A promising improvement, but not across every seed</h2>
 <p>I compared the three trained C policies on <strong>1,000 matched cube positions</strong>, without retraining or changing checkpoints. The fixed BC baseline succeeded in 939/1,000 trials (93.9%). These positions were separate from SAC training and checkpoint validation, but the comparison subsequently informed my choice of Seed 456 for the gate experiments; it is therefore exploratory evidence for that selection.</p>
 <figure><img class="result-chart" src="../assets/franka/franka-sac-heldout-1000.svg" alt="Held-out success rates: BC 93.9%, C seed 42 93.6%, C seed 123 93.1%, and C seed 456 95.7%." loading="lazy"><figcaption>Evaluation seeds 130000–130999 (later used for model selection). C / Seed 456: <strong>957/1,000 (95.7%)</strong>, an improvement of 1.8 percentage points over BC. C / Seeds 42 and 123: 93.6% and 93.1%.</figcaption></figure>
 <p><strong>Why did the results differ?</strong> Every change in success or failure occurred outside the ±12 cm demonstration range. Seed 456 rescued 22 BC failures but caused 4 regressions; the other SAC seeds caused more regressions than rescues.</p>
@@ -97,7 +97,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="gate-heading">
-<p class="section-no">04 — Selective Residual Reinforcement Learning</p>
+<p class="section-no">04 / Selective Residual Reinforcement Learning</p>
 <h2 id="gate-heading">Can SAC correct failures without disrupting successes?</h2>
 <p>Always applying SAC can rescue BC failures, but it can also turn successful grasps into failures. I tested a simple <strong>episode-level spatial gate</strong>: keep BC unchanged inside its ±12 cm demonstration range, and activate SAC only in outer regions where paired calibration trials suggested a net benefit. The BC and SAC model weights remain frozen.</p>
 <div class="methods" aria-label="Selective control strategies">
@@ -111,7 +111,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <caption>Paired selective residual SAC results on 2,000 test positions</caption>
 <thead><tr><th scope="col">Controller</th><th scope="col">Success</th><th scope="col">Rescue / Regression</th><th scope="col">SAC used</th></tr></thead>
 <tbody>
-<tr><td>BC only</td><td>1,859 / 2,000 (92.95%)</td><td>—</td><td>0%</td></tr>
+<tr><td>BC only</td><td>1,859 / 2,000 (92.95%)</td><td>N/A</td><td>0%</td></tr>
 <tr><td>Always SAC</td><td>1,899 / 2,000 (94.95%)</td><td>53 / 13</td><td>100%</td></tr>
 <tr class="highlight"><td>Safety Gate</td><td>1,884 / 2,000 (94.20%)</td><td>25 / 0</td><td>14.8%</td></tr>
 <tr class="highlight"><td>Balanced Gate</td><td>1,902 / 2,000 (95.10%)</td><td>44 / 1</td><td>30.7%</td></tr>
@@ -137,7 +137,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="multiseed-heading">
-<p class="section-no">05 — Cross-Seed Robustness</p>
+<p class="section-no">05 / Cross-Seed Robustness</p>
 <h2 id="multiseed-heading">Does the same spatial gate work with other SAC policies?</h2>
 <p>To test whether the promising Seed 456 result generalized, I kept the <strong>same frozen Safety (EN) and Balanced (EN/WS) gates</strong> and evaluated SAC training seeds <strong>42, 123, and 456</strong> on another <strong>2,000 previously unused positions per checkpoint</strong> (evaluation seeds 170000–171999). The BC baseline and all cube positions were identical across checkpoints; no gate was recalibrated. This directly tests transfer of a <em>Seed 456-calibrated gate</em>, not the effectiveness of calibrating a new gate for each policy.</p>
 <figure>
@@ -148,15 +148,15 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <caption>Multi-seed evaluation: fixed Seed 456-calibrated gates on 2,000 matched positions per checkpoint</caption>
 <thead><tr><th scope="col">SAC seed</th><th scope="col">Controller</th><th scope="col">Success</th><th scope="col">Rescue / Regression</th><th scope="col">SAC used</th></tr></thead>
 <tbody>
-<tr><td>42</td><td>BC only</td><td>92.50%</td><td>—</td><td>0%</td></tr>
+<tr><td>42</td><td>BC only</td><td>92.50%</td><td>N/A</td><td>0%</td></tr>
 <tr><td>42</td><td>Always SAC</td><td>92.40%</td><td>28 / 30</td><td>100%</td></tr>
 <tr><td>42</td><td>Safety</td><td>92.30%</td><td>1 / 5</td><td>16.9%</td></tr>
 <tr><td>42</td><td>Balanced</td><td>93.45%</td><td>24 / 5</td><td>33.6%</td></tr>
-<tr><td>123</td><td>BC only</td><td>92.50%</td><td>—</td><td>0%</td></tr>
+<tr><td>123</td><td>BC only</td><td>92.50%</td><td>N/A</td><td>0%</td></tr>
 <tr><td>123</td><td>Always SAC</td><td>92.20%</td><td>30 / 36</td><td>100%</td></tr>
 <tr><td>123</td><td>Safety</td><td>92.50%</td><td>4 / 4</td><td>16.9%</td></tr>
 <tr><td>123</td><td>Balanced</td><td>91.50%</td><td>11 / 31</td><td>33.6%</td></tr>
-<tr><td>456</td><td>BC only</td><td>92.50%</td><td>—</td><td>0%</td></tr>
+<tr><td>456</td><td>BC only</td><td>92.50%</td><td>N/A</td><td>0%</td></tr>
 <tr><td>456</td><td>Always SAC</td><td>94.30%</td><td>53 / 17</td><td>100%</td></tr>
 <tr class="highlight"><td>456</td><td>Safety</td><td>94.10%</td><td>32 / 0</td><td>16.9%</td></tr>
 <tr class="highlight"><td>456</td><td>Balanced</td><td>94.70%</td><td>44 / 0</td><td>33.6%</td></tr>
@@ -167,7 +167,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="policy-specific-heading">
-<p class="section-no">06 — Policy-Specific Gate Calibration</p>
+<p class="section-no">06 / Policy-Specific Gate Calibration</p>
 <h2 id="policy-specific-heading">What if each SAC policy gets its own gate?</h2>
 <p>Instead of transferring one spatial gate to every SAC model, I calibrated the same pre-defined quadrant rules <strong>separately for five newly trained SAC seeds</strong> (7, 19, 73, 202, 314). Each model used 500 paired calibration positions, followed by 2,000 new, matched test positions. A gate activates SAC only in regions with enough observed rescues and sufficiently few regressions; otherwise, it uses BC alone.</p>
 <p><strong>Four of the five models selected no region</strong> and fell back to BC for every trial. Only Seed 314 produced an active policy-specific gate. Its results are shown below:</p>
@@ -175,7 +175,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <caption>Seed 314: policy-specific gate evaluation on 2,000 positions; BC baseline 91.70%</caption>
 <thead><tr><th scope="col">Controller (Seed 314)</th><th scope="col">Success</th><th scope="col">Rescue / Regression</th><th scope="col">SAC used</th></tr></thead>
 <tbody>
-<tr><td>BC Only</td><td>91.70%</td><td>—</td><td>0%</td></tr>
+<tr><td>BC Only</td><td>91.70%</td><td>N/A</td><td>0%</td></tr>
 <tr><td>Always SAC</td><td>96.10%</td><td>91 / 3</td><td>100%</td></tr>
 <tr><td>Fixed Safety</td><td>92.75%</td><td>21 / 0</td><td>16.8%</td></tr>
 <tr><td>Policy-Specific Safety</td><td>94.70%</td><td>60 / 0</td><td>34.6%</td></tr>
@@ -187,8 +187,8 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="stability-heading">
-<p class="section-no">07 — SAC Training Stability</p>
-<h2 id="stability-heading">Why does the same SAC method sometimes help—and sometimes hurt?</h2>
+<p class="section-no">07 / SAC Training Stability</p>
+<h2 id="stability-heading">Why does the same SAC method sometimes help and sometimes hurt?</h2>
 <p>I trained <strong>five additional Condition C SAC models</strong> (seeds 811, 823, 827, 829, 839), saving checkpoints at 10k, 20k, and 30k steps. Each checkpoint was evaluated on the <strong>same 2,000 new positions</strong> (evaluation seeds 220000–221999). The BC-only baseline was 91.85%. The curves show final-test outcomes for analysis, <em>not</em> for choosing checkpoints.</p>
 <figure>
 <div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-sac-training-stability.svg" alt="SAC final success rate versus training steps for five seeds: Seed 811 rises from 92.05% at 10k to 95.80% at 30k; Seed 823 peaks at 93.90% at 20k; Seed 827 drops to 88.10% at 20k; Seed 829 peaks at 94.50% at 20k then falls to 89.65% at 30k; Seed 839 stays near 92%. BC baseline 91.85%." loading="lazy"></div>
@@ -207,13 +207,13 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </tbody></table></div>
 <p><strong>Does more validation help?</strong> Selecting checkpoints with 40 versus 500 validation episodes agreed for four of five models. The mean final success rates were <strong>93.63% versus 93.70%</strong>, respectively; this small difference was <strong>not statistically established</strong>. Across the five runs, success rates spanned 7.00 percentage points at 30k, compared with 1.20 points at 10k.</p>
 <p class="takeaway"><strong>Finding 6:</strong> Residual SAC can substantially rescue failed BC grasps, but continued training can also introduce many regressions. <strong>Training-seed variability and checkpoint quality must be addressed before an adaptive gate can be expected to generalize.</strong></p>
-<p class="small">Five SAC training seeds and one shared 2,000-position test set limit generalization. All checkpoint choices were frozen before final evaluation. Candidate causes—including exploration, critic approximation, replay-buffer composition, and entropy dynamics—remain hypotheses, not experimentally identified mechanisms.</p>
+<p class="small">Five SAC training seeds and one shared 2,000-position test set limit generalization. All checkpoint choices were frozen before final evaluation. Candidate causes, including exploration, critic approximation, replay-buffer composition, and entropy dynamics, remain hypotheses, not experimentally identified mechanisms.</p>
 </section>
 <hr>
 <section aria-labelledby="regularization-heading">
-<p class="section-no">08 — Controlling SAC Regressions</p>
+<p class="section-no">08 / Controlling SAC Regressions</p>
 <h2 id="regularization-heading">Can smaller RL corrections prevent failed grasps?</h2>
-<p>After finding unstable SAC training, I tested a <strong>controlled change to the learning reward</strong>. Arm A kept the original residual-action penalty coefficient (<strong>0.005</strong>); Arm B used a stronger penalty (<strong>0.020</strong>). Everything else—including frozen BC, SAC training settings, and the ±5 mm per-axis correction limit—was held fixed. I trained <strong>five new SAC seeds</strong> (907, 911, 919, 929, 937) per arm and evaluated both arms on the same <strong>2,000 new cube positions</strong> per model. The shared BC baseline was <strong>92.10%</strong>.</p>
+<p>After finding unstable SAC training, I tested a <strong>controlled change to the learning reward</strong>. Arm A kept the original residual-action penalty coefficient (<strong>0.005</strong>); Arm B used a stronger penalty (<strong>0.020</strong>). Everything else, including frozen BC, SAC training settings, and the ±5 mm per-axis correction limit, was held fixed. I trained <strong>five new SAC seeds</strong> (907, 911, 919, 929, 937) per arm and evaluated both arms on the same <strong>2,000 new cube positions</strong> per model. The shared BC baseline was <strong>92.10%</strong>.</p>
 <figure>
 <div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-sac-regression-final.svg" alt="Final success-rate comparison for five SAC training seeds, showing BC Only, original-penalty Arm A at 30k and selected checkpoints, and stronger-penalty Arm B at 30k and selected checkpoints." loading="lazy"></div>
 <figcaption>Final success rates across five training seeds, separating fixed 30k checkpoints from validation-selected checkpoints. The two comparisons answer different questions.</figcaption>
@@ -249,7 +249,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="replication-heading">
-<p class="section-no">09 — Independent-Seed Replication</p>
+<p class="section-no">09 / Independent-Seed Replication</p>
 <h2 id="replication-heading">Does the regularization benefit reproduce on new models?</h2>
 <p>To challenge the promising five-seed result rather than optimize around it, I <strong>preregistered</strong> the coefficients, hypotheses, evaluation protocol, and analysis before training <strong>ten new paired SAC seeds</strong> (20 models, 60 checkpoints). I kept both training conditions unchanged: <strong>Arm A = 0.005</strong> and <strong>Arm B = 0.020</strong>. I selected checkpoints using <strong>500 shared validation positions</strong> (250000–250499), froze the choices and hashes, then tested on <strong>2,000 separate matched positions</strong> (260000–261999). This final set has a different fixed BC baseline (<strong>92.65%</strong>) from the preceding study.</p>
 <h3>Research process: from hypothesis to the next question</h3>
@@ -288,7 +288,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="action-chunk-heading">
-<p class="section-no">10 — Action-Chunked BC &amp; Residual SAC</p>
+<p class="section-no">10 / Action-Chunked BC &amp; Residual SAC</p>
 <h2 id="action-chunk-heading">Can four-step action plans outperform single-step imitation?</h2>
 <p>To investigate the base policy rather than tune SAC again, I trained <strong>H1</strong> (one-step MLP BC) and <strong>H4</strong> (four-step action-chunked MLP BC) with <strong>three matched training seeds</strong> (42, 123, 456). Both used the same source episodes, valid starting observations, dynamics, and test positions. I audited <strong>300 temporally intact expert episodes</strong>: the earlier randomly subsampled dataset had temporal gaps and could not safely supply consecutive chunk targets. H4 predicts four actions and executes them before replanning.</p>
 <figure><div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-action-chunk-bc-success.svg" alt="Across BC seeds 42, 123, 456, H1 success was 88.00%, 75.00%, 87.25%, while H4 success was 93.95%, 93.45%, 95.70%." loading="lazy"></div><figcaption>Final BC-only performance across 2,000 identical cube positions per model (seeds 290000–291999). H4 outperformed H1 in every training seed; these new models use a different dataset from the earlier SAC experiments.</figcaption></figure>
@@ -321,7 +321,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="replanning-heading">
-<p class="section-no">11 — Replanning Frequency Ablation</p>
+<p class="section-no">11 / Replanning Frequency Ablation</p>
 <h2 id="replanning-heading">Does longer action-chunk execution help the same frozen policy?</h2>
 <p>The earlier H1/H4 comparison changed both the learned action targets and runtime execution. To isolate <strong>replanning frequency</strong>, I reused three already-trained <strong>H4 MLP BC policies</strong>, without changing their parameters, output size, normalization, or demonstrations. At <strong>R1</strong> the model predicts four actions but executes only the first before replanning; at <strong>R2</strong> it executes two; at <strong>R4</strong> it executes all four. All robot dynamics, gripper commands, and Final initial positions were held fixed. <strong>No RL or new training</strong> was involved.</p>
 <figure><div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-h4-replanning-success.svg" alt="Success rates for R1, R2 and R4 across three frozen four-action MLP behavior-cloning models, evaluated at 2,000 shared start positions per seed." loading="lazy"></div><figcaption>New Final evaluation: three H4 BC seeds × three replanning conditions × 2,000 matched positions (310000–311999) = <strong>18,000 simulated episodes</strong>. These are three fixed policies, not 6,000 independently trained policies.</figcaption></figure>
@@ -344,13 +344,13 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <figure><div class="chart-scroll"><img class="result-chart" src="../assets/franka/franka-h4-replanning-runtime.svg" alt="Mean episode wall-clock time under R1, R2 and R4 for each of the three frozen H4 BC policies." loading="lazy"></div><figcaption>Inference-time savings do not scale proportionally to full episode time.</figcaption></figure>
 <p>Software checks reproduced 60 earlier H4 episodes and a saved 121-step trajectory. A duplicate partial CSV for Seed 456/R1 was preserved and excluded, then fully rerun with unchanged conditions following explicit authorization; two previously viewed outcomes and this deviation were disclosed. All 18,000 accepted episodes passed seed, position, and checkpoint-hash integrity checks. A later correction to latency-unit scaling did not affect success rates or significance tests.</p>
 </div></details>
-<p class="takeaway"><strong>Finding 10:</strong> With identical trained H4 weights, <strong>executing longer cached action sequences contributed to higher success</strong> in this simulated task. But large seed- and region-level differences mean that <strong>reliability under changing observations or dynamics remains unresolved</strong>. The next experiment should probe controlled uncertainty or task disturbances—not assume that longer open-loop execution is universally best.</p>
+<p class="takeaway"><strong>Finding 10:</strong> With identical trained H4 weights, <strong>executing longer cached action sequences contributed to higher success</strong> in this simulated task. But large seed- and region-level differences mean that <strong>reliability under changing observations or dynamics remains unresolved</strong>. The next experiment should probe controlled uncertainty or task disturbances rather than assume that longer open-loop execution is universally best.</p>
 <p class="small">Limits: only three BC training seeds and one known-state, single-cube MuJoCo task; no camera observation, real disturbance, new SAC training, ACT, or Diffusion Policy. This study isolates runtime replanning within H4, not the full architectural/supervision difference between H1 and H4.</p>
 <p class="sources"><a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/h4-replanning-ablation/EXPERIMENTS_H4_REPLANNING_ABLATION.md">H4 replanning report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/h4-replanning-ablation/bc_results/h4_replanning/summary.json">Analysis JSON</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/tree/experiment/h4-replanning-ablation/bc_results/h4_replanning">Figures &amp; data</a></p>
 </section>
 <hr>
 <section aria-labelledby="adaptive-heading">
-<p class="section-no">12 — Uncertainty-Aware Adaptive Replanning</p>
+<p class="section-no">12 / Uncertainty-Aware Adaptive Replanning</p>
 <h2 id="adaptive-heading">Can observed uncertainty guide how often a robot replans?</h2>
 <p>The previous frozen-H4 study established that four-step execution can outperform one-step replanning without model retraining, but it did not establish robustness to uncertain observations. I therefore tested <strong>fixed R1, fixed R4, and a simple Adaptive controller</strong> under synthetic Gaussian noise added to observed cube XY and matching relative XY, while leaving the robot's physical state unchanged. The same <strong>three frozen H4 MLP policies</strong> were used throughout; no BC or SAC training was performed.</p>
 <h3>The decision procedure</h3>
@@ -385,7 +385,7 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="kalman-online-heading">
-<p class="section-no">13 — Kalman Online Replanning Under Changing Noise</p>
+<p class="section-no">13 / Kalman Online Replanning Under Changing Noise</p>
 <h2 id="kalman-online-heading">Can a robot revise its replanning interval when perception quality changes?</h2>
 <p>The previous adaptive controller committed to one interval after an initial estimate. To test whether <strong>updating that decision during execution</strong> helps, I reused the same three frozen H4 BC policies and an <strong>independently validated Kalman observation-noise estimator</strong> (16/16 diagnostic gates passed). Synthetic Gaussian noise in the observed cube position changed from <strong>0 to 10 mm</strong> or <strong>10 to 0 mm</strong> at observation step 40; robot physics and trained policy weights were unchanged.</p>
 <div class="methods" aria-label="Kalman online replanning controllers">
@@ -409,14 +409,14 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 </section>
 <hr>
 <section aria-labelledby="discussion-heading">
-<p class="section-no">14 — Discussion &amp; Key Takeaway</p>
+<p class="section-no">14 / Discussion &amp; Key Takeaway</p>
 <h2 id="discussion-heading">What the full research sequence revealed</h2>
 <p><strong>Imitation learning:</strong> Broader demonstrations produced a large BC generalization improvement, while one DAgger round did not outperform added expert trajectories. In a later matched study, four-action MLP BC outperformed one-step BC (94.37% versus 83.42%), although future-action supervision and output-head capacity also differed.</p>
 <p><strong>Residual RL and reproducibility:</strong> SAC sometimes rescued failed BC grasps and sometimes destroyed successful ones. Fixed spatial gates did not generalize reliably; policy-specific gates often abstained. A five-seed regularization experiment motivated a preregistered ten-seed replication, which did not establish a reliable between-penalty advantage. Chunk-aware SAC improved many validation-selected checkpoints but did not reliably add more benefit to H4 than H1.</p>
 <p><strong>Execution timing and observation uncertainty:</strong> Without retraining, executing the full four-action prediction rather than replanning every step improved mean success by 5.73 points across three frozen H4 policies. Under stationary synthetic observation noise, a one-time uncertainty-based switch improved success over a calibration-selected fixed R4 baseline (+1.01 pp). A subsequent preregistered study under changing noise found <strong>+1.48 pp</strong> for Kalman Online versus Kalman OneShot (95% paired bootstrap CI <strong>+0.92 to +2.08 pp</strong>), with positive mean effects for all three frozen policies. <strong>Estimating uncertainty and selecting safe, effective feedback remain different problems.</strong></p>
 <p><strong>Relation to contemporary research:</strong> These state-based MLP studies are not implementations of <a href="https://www.roboticsproceedings.org/rss19/p026.html">Diffusion Policy</a> or <a href="https://www.roboticsproceedings.org/rss19/p016.html">ACT</a>. More directly related recent work includes <a href="https://arxiv.org/abs/2407.16677">ResiP</a> and <a href="https://arxiv.org/abs/2509.19301">ResFiT</a> on residual refinement, and <a href="https://arxiv.org/abs/2606.00537">PACE (NeurIPS 2026)</a> and <a href="https://arxiv.org/abs/2610.19765">RAIN (2026 preprint)</a> on adaptive action execution or refinement. Adaptive execution is <em>not</em> claimed as a novel concept here; my contribution so far is a controlled, reproducible study of specific failure modes and decision trade-offs.</p>
 <p class="takeaway"><strong>Next research question:</strong> Does the benefit of online replanning survive <em>temporally correlated observation errors</em> or <em>intermittent missing measurements</em>? These two challenges should be tested separately, using frozen controllers, preregistered protocols, and new paired evaluation positions before moving to camera-based perception or real hardware.</p>
-<p class="small">Limitations: one simulated state-observation cube grasping task, only three frozen BC training seeds in the latest studies, synthetic independent Gaussian position noise rather than images, correlated perception error, or occlusion, and no real robot. All confidence intervals must be interpreted at their stated level—paired positions are not new training-seed replications. Hardware differences prevent strong aggregate wall-clock timing claims.</p>
+<p class="small">Limitations: one simulated state-observation cube grasping task, only three frozen BC training seeds in the latest studies, synthetic independent Gaussian position noise rather than images, correlated perception error, or occlusion, and no real robot. All confidence intervals must be interpreted at their stated level: paired positions are not new training-seed replications. Hardware differences prevent strong aggregate wall-clock timing claims.</p>
 <p class="sources"><a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/h4-kalman-online-dynamic-replanning/bc_results/h4_kalman_online_protocol.json">Latest Kalman online protocol</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/h4-kalman-online-dynamic-replanning/kalman_online_experiment.py">Online experiment code</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/h4-uncertainty-adaptive-replanning/EXPERIMENTS_H4_UNCERTAINTY_ADAPTIVE_REPLANNING.md">Earlier adaptive replanning report</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/h4-replanning-ablation/EXPERIMENTS_H4_REPLANNING_ABLATION.md">Replanning ablation</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/action-chunked-bc-residual-rl/EXPERIMENTS_ACTION_CHUNKED_BC_RESIDUAL_RL.md">Action-chunked BC and SAC</a> · <a href="https://github.com/fujitamasahir/franka-grasping-learning/blob/experiment/sac-regularization-replication/EXPERIMENTS_SAC_REGULARIZATION_REPLICATION.md">Independent-seed replication</a></p>
 </section>
 <hr><footer><a href="../index.html#projects">← Back to projects</a><p>© 2026 Masahiro Fujita</p></footer>
