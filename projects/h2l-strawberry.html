@@ -81,7 +81,7 @@ if(e.data===YT.PlayerState.PLAYING){paused=false;syncButton(true);}
 if(e.data===YT.PlayerState.PAUSED){paused=true;syncButton(false);}
 },
 onAutoplayBlocked:function(){paused=true;syncButton(false);status.textContent="H2L demonstration · 1:01–1:17 · press Play to start";},
-onError:function(){syncButton(false);status.textContent="Video unavailable here — use the official video link above.";}
+onError:function(){syncButton(false);status.textContent="Video unavailable here; use the official video link above.";}
 }});
 };
 button.addEventListener("click",function(){if(!player||typeof player.playVideo!=="function")return;if(player.getPlayerState()===1){paused=true;player.pauseVideo();syncButton(false);}else{paused=false;const time=player.getCurrentTime();if(time<START||time>=END)player.seekTo(START,true);player.playVideo();syncButton(true);}});
