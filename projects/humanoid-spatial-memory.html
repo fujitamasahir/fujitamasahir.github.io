@@ -54,9 +54,10 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <p class="facts">36 development environments (12 room-graph layouts, 12 rectangular-partition layouts, 12 maze layouts) · Two schedules per world · Four policies · Fixed random seed 42 · 80-step limit · Maximum 20 observations including initialization · Assumed 0.75 m/grid cell</p>
 </section>
 <figure>
-<img class="figure-image" src="../assets/spatial-memory/g1-route-animated.svg" alt="Animated plan-view map showing the actual saved MuJoCo maze walls and a marker following a recorded successful G1 route." width="960" height="720">
-<figcaption>The real maze layout and recorded trajectory from a successful 68-step G1 single-episode validation run. This was a preselected case: the first admitted Room Graph development environment, its first obstacle-change schedule, the Periodic observation policy, and random seed 42. It was not chosen for speed or best-case performance. The moving dot is a schematic waypoint animation, not rendered footage of G1 walking; animation pacing is illustrative.</figcaption>
+<img class="figure-image" src="../assets/spatial-memory/g1-split_screen.gif" alt="Synchronized two-panel animation of a simulated Unitree G1 moving through an indoor MuJoCo maze on the left and its route, current position, start, and goal on an overhead map on the right." width="1920" height="720" decoding="async">
+<figcaption>A synchronized replay of a saved MuJoCo navigation trajectory. The left view shows G1 with presentation-only walking animation; the right view shows its position and route on an overhead map, including the start and goal. This historical demonstration is illustrative, not an episode from the 288-episode comparison.</figcaption>
 </figure>
+<p class="small">An earlier, separate <a href="../assets/spatial-memory/g1-route-animated.svg">overhead route animation</a> is also available.</p>
 <hr>
 <section aria-labelledby="question-heading">
 <p class="section-no">01 / Research Question</p>
@@ -75,6 +76,10 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <li class="research-step"><strong>4. MuJoCo collision checks</strong><span>Only the chosen movement is checked against 3D geometry before execution. Rotation and translation can be rejected without granting the planner a hidden map.</span></li>
 </ol>
 <p>Walls, changing objects, and pedestrian proxies exist in the MuJoCo scene. The agent receives measured occupancy, not simulator obstacle labels or future pedestrian trajectories. Pedestrian proxies follow predefined motion and do not react to G1.</p>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-demo.gif" alt="Close-up replay of a Unitree G1 humanoid moving and turning in a simulated indoor maze, with visually animated arms and legs." width="1280" height="720" loading="lazy" decoding="async">
+<figcaption>Close-up G1 presentation replay. The arm and leg movements are for visualization only; the navigation uses kinematic root motion rather than physically actuated bipedal walking.</figcaption>
+</figure>
 <div class="takeaway">The key distinction is between <strong>what the robot observes</strong>, <strong>what it remembers</strong>, and <strong>whether its actual body can fit along a planned route</strong>.</div>
 </section>
 <hr>
