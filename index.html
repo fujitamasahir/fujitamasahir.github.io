@@ -37,8 +37,8 @@ section.work{padding:0 10px 7px}
 .project{display:grid;grid-template-columns:1fr 2fr;gap:28px;align-items:center;margin-bottom:27px}
 .project-image{display:block;border:1px solid #e5e5e5;border-radius:10px;background:#fafafa;overflow:hidden}
 .project-image img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:contain;padding:10px}
-.project-image.franka-thumbnail{aspect-ratio:4/3}
-.project-image.franka-thumbnail img{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;padding:0}
+.project-image.franka-thumbnail,.project-image.g1-thumbnail{aspect-ratio:4/3}
+.project-image.franka-thumbnail img,.project-image.g1-thumbnail img{width:100%;height:100%;aspect-ratio:auto;object-fit:cover;padding:0}
 .meta{margin-bottom:11px;color:#555;font-size:15px}
 .project p{margin-bottom:12px}
 .project .award{color:#333;font-weight:600}
@@ -96,6 +96,17 @@ section.work{padding-left:0;padding-right:0}
 <hr>
 <section class="work" id="projects" aria-labelledby="projects-heading">
 <h2 id="projects-heading">Projects</h2>
+<article class="project">
+<a class="project-image g1-thumbnail" href="projects/humanoid-spatial-memory.html" aria-label="Open humanoid spatial memory project">
+<img src="assets/spatial-memory/g1-route-animated.svg" alt="Animated overhead route through a MuJoCo maze, reconstructed from a recorded successful Unitree G1 navigation run" width="960" height="720">
+</a>
+<div>
+<h3><a href="projects/humanoid-spatial-memory.html">Humanoid Spatial Memory: 3D Perception and Navigation</a></h3>
+<p class="meta">MuJoCo · Unitree G1 · Spatial Memory · A*</p>
+<p>I built a humanoid navigation testbed with 3D ray sensing, changing indoor obstacles, and collision-aware routing. Across <strong>288 evaluated episodes</strong>, periodic observation reached <strong>67/72 goals</strong>; uncertainty-driven updates used fewer observations (7.19 vs. 11.08 per episode). Motion is kinematic, not physical walking.</p>
+<a href="projects/humanoid-spatial-memory.html">project page</a>
+</div>
+</article>
 <article class="project">
 <a class="project-image franka-thumbnail" href="projects/franka-grasping.html" aria-label="Open Franka Panda grasping project">
 <img src="assets/franka/franka-main.gif" alt="Wide Expert BC robot policy grasping and lifting a cube">
