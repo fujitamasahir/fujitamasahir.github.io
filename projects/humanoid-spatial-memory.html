@@ -47,6 +47,29 @@ ul{padding-left:22px;margin:0 0 17px}li{margin:7px 0}
 @media(max-width:600px){.maze-sheet img{min-width:620px}}
 footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 @media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section,.abstract{padding:0}.research-path{grid-template-columns:1fr;gap:7px}.research-step{padding:10px 12px}}
+
+/* Experimental-design explanations: responsive, self-contained diagrams. */
+.method-figure{border:1px solid #e2e8ef;border-radius:10px;padding:16px;margin:18px 0;background:#fbfcfe}
+.method-figure svg{display:block;width:100%;height:auto;max-height:250px}
+.method-figure figcaption{margin-top:8px}
+.method-heading{margin-top:26px}
+.knowledge-table{min-width:580px;table-layout:fixed}
+.knowledge-table th:nth-child(1),.knowledge-table td:nth-child(1){width:31%;text-align:left}
+.knowledge-table th:nth-child(2),.knowledge-table td:nth-child(2){width:19%;text-align:left}
+.knowledge-table th:nth-child(3),.knowledge-table td:nth-child(3){width:50%;text-align:left;white-space:normal}
+.policy-definition-table{min-width:640px}
+.policy-definition-table th,.policy-definition-table td{text-align:left!important;white-space:normal}
+.policy-definition-table th:first-child{width:19%}
+.policy-diagrams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.policy-card{border:1px solid #e2e8ef;border-radius:10px;padding:14px;background:#fbfcfe}
+.policy-card h4{font-size:15px;margin:0 0 3px;color:#273445}
+.policy-card p{font-size:13px;color:#566374;line-height:1.5;margin:0 0 10px}
+.policy-card svg{display:block;width:100%;height:auto}
+.policy-diagram-caption{font-size:12px;color:#667386;margin-top:7px;line-height:1.5}
+.memory-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#566374;margin:8px 0 0}
+.memory-legend span{display:inline-flex;align-items:center;gap:5px}
+.memory-key{width:11px;height:11px;border:1px solid #b8c4d0;display:inline-block;border-radius:2px}
+@media(max-width:600px){.method-figure{padding:10px}.policy-diagrams{grid-template-columns:1fr;gap:9px}.policy-card{padding:12px}.knowledge-table{min-width:530px}}
 </style>
 </head>
 <body><main>
@@ -95,7 +118,119 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <section aria-labelledby="study-heading">
 <p class="section-no">03 / Experimental Design</p>
 <h2 id="study-heading">Four policies, matched conditions</h2>
-<p><strong>Static</strong> observes once at the beginning. <strong>Periodic</strong> refreshes at regular intervals. <strong>Age</strong> requests observations based on how old remembered information is. <strong>Uncertainty</strong> requests observations based on its uncertainty estimate.</p>
+<p>All four policies use the <strong>same G1 model, sensor, occupancy memory and navigation planner</strong>. They differ in one decision: <strong>when to request a new spatial-memory observation</strong>.</p>
+
+<h3 class="method-heading">What counts as an observation?</h3>
+<p>An <strong>observation</strong> is one authorized scan by a torso-mounted MuJoCo ray sensor. From the robot's current heading, it casts <strong>61 horizontal rays across a 120° forward field of view (±60°)</strong>, up to <strong>6 m</strong> (about eight 0.75 m grid cells). The rays sample free space up to the first measured surface: walls, obstacles or pedestrians block the view behind them. This is a <strong>single horizontal scanning plane</strong>, not a depth camera or a full 3D point cloud.</p>
+<figure class="method-figure">
+<svg viewBox="0 0 710 238" role="img" aria-labelledby="fov-title fov-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="fov-title">Forward field of view of the G1 spatial-memory sensor</title>
+<desc id="fov-desc">The robot faces right. A 120-degree sector extends six meters in front of the robot. A wall blocks the rays, leaving the area behind the wall unobserved.</desc>
+<defs><pattern id="method-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" stroke="#cbd5e1" stroke-width="0.7" fill="none"/></pattern></defs>
+<rect x="3" y="3" width="704" height="232" rx="8" fill="#f4f8fb"/>
+<rect x="12" y="12" width="686" height="212" fill="url(#method-grid)"/>
+<path d="M180 118L343 24A188 188 0 0 1 343 212Z" fill="#93c9ee" fill-opacity=".45" stroke="#2985bc" stroke-width="1.7" stroke-dasharray="5 4"/>
+<path d="M180 118L368 118M180 118L343 24M180 118L343 212M180 118L356 54M180 118L356 182" stroke="#2689bc" stroke-width="1.1" stroke-opacity=".65" fill="none"/>
+<rect x="292" y="72" width="20" height="92" rx="2" fill="#6b7789"/>
+<rect x="312" y="72" width="57" height="92" fill="#dce4ed" fill-opacity=".92"/>
+<path d="M180 118L292 118" stroke="#1477ac" stroke-width="2.8" stroke-linecap="round"/>
+<circle cx="180" cy="118" r="17" fill="#2977ad" stroke="#fff" stroke-width="3"/>
+<path d="M177 109l11 9-11 9z" fill="white"/>
+<text x="180" y="152" fill="#26394e" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold">G1</text>
+<text x="260" y="30" fill="#266b94" font-family="Arial,sans-serif" font-size="14" font-weight="bold">120° FOV</text>
+<text x="305" y="62" text-anchor="middle" fill="#394d60" font-family="Arial,sans-serif" font-size="12">Wall</text>
+<text x="340" y="111" text-anchor="middle" fill="#586878" font-family="Arial,sans-serif" font-size="11">Hidden</text>
+<text x="340" y="125" text-anchor="middle" fill="#586878" font-family="Arial,sans-serif" font-size="11">area</text>
+<path d="M433 118h39" stroke="#2985bc" stroke-width="3"/><circle cx="453" cy="118" r="4.5" fill="#2985bc"/>
+<text x="485" y="112" font-family="Arial,sans-serif" font-size="14" fill="#24374b" font-weight="bold">61 rays, every 2°</text>
+<text x="485" y="132" font-family="Arial,sans-serif" font-size="12" fill="#586878">Maximum range: 6 m</text>
+<text x="485" y="152" font-family="Arial,sans-serif" font-size="12" fill="#586878">Torso-mounted sensor</text>
+<text x="485" y="172" font-family="Arial,sans-serif" font-size="12" fill="#586878">Occluded cells stay unseen</text>
+</svg>
+<figcaption>Conceptual top-down illustration (not to scale). The blue sector shows the sensor's possible view; the wall blocks rays, so the region behind it is not measured. Rotating G1 rotates the sector with it.</figcaption>
+</figure>
+<p>Each observation produces a <strong>2D occupancy grid</strong>: <code>0</code> means observed free, <code>1</code> means observed occupied, and <code>-1</code> means unknown or unobserved. Only measured cells replace their previous memory values; cells hidden behind obstacles retain whatever the robot previously remembered. An observation is <strong>not</strong> a full map refresh.</p>
+<div class="memory-legend" aria-label="Occupancy map legend">
+<span><i class="memory-key" style="background:#f0faf4"></i><code>0</code> Free</span>
+<span><i class="memory-key" style="background:#687687"></i><code>1</code> Occupied</span>
+<span><i class="memory-key" style="background:#e7ebf0"></i><code>-1</code> Unknown</span>
+</div>
+
+<h3 class="method-heading">What does the robot already know?</h3>
+<p>The experiment <strong>assumes accurate self-localization</strong>; localization is not learned from the observation rays. The start and goal coordinates are provided, and the simulation maintains G1's current grid position and heading as it moves and turns.</p>
+<div class="table-scroll">
+<table class="results-table knowledge-table">
+<caption>Robot-accessible information and its source in the Phase 2 simulator</caption>
+<thead><tr><th scope="col">Information</th><th scope="col">Known?</th><th scope="col">Source</th></tr></thead>
+<tbody>
+<tr><td>Start coordinates</td><td>Yes</td><td>Provided at episode initialization</td></tr>
+<tr><td>Goal coordinates</td><td>Yes</td><td>Provided as the navigation target</td></tr>
+<tr><td>Current position (x, y)</td><td>Yes</td><td>Simulation-maintained robot pose; no localization error is modeled</td></tr>
+<tr><td>Current heading (yaw)</td><td>Yes</td><td>Initial heading and executed robot turns</td></tr>
+<tr><td>Nearby walls and obstacles</td><td>Partially</td><td>Authorized forward-ray observations and retained occupancy memory</td></tr>
+<tr><td>Space behind occlusions</td><td>Not directly</td><td>Only any previously observed information is remembered</td></tr>
+<tr><td>Future pedestrian motion</td><td>No</td><td>Future schedules and simulator ground truth are withheld from the agent</td></tr>
+</tbody></table>
+</div>
+<p class="small">Navigation also receives feedback when a <em>selected</em> movement is rejected by MuJoCo collision checks; rejected actions are tracked separately from the occupancy map. It does not receive collision checks for every possible unselected action.</p>
+
+<h3 class="method-heading">How the four observation policies work</h3>
+<div class="table-scroll">
+<table class="results-table policy-definition-table">
+<caption>Fixed observation-scheduling rules in the matched Phase 2 experiment</caption>
+<thead><tr><th scope="col">Policy</th><th scope="col">When another memory observation is requested</th></tr></thead>
+<tbody>
+<tr><td><strong>Static</strong></td><td>Never after the mandatory observation at step 0.</td></tr>
+<tr><td><strong>Periodic</strong></td><td>Every four steps: 0, 4, 8, 12, 16, …, until the budget is exhausted.</td></tr>
+<tr><td><strong>Age</strong></td><td>When at least <strong>50%</strong> of the <em>previously observed</em> cells within a <strong>3-cell radius</strong> of the current position were last observed <strong>4 or more steps ago</strong>.</td></tr>
+<tr><td><strong>Uncertainty</strong></td><td>When the <strong>mean binary entropy ≥ 0.75 bits</strong> for previously observed cells within the same 3-cell radius. Entropy is estimated from time since observation and observed occupancy flips; never-seen cells are excluded from this score.</td></tr>
+</tbody></table>
+</div>
+<div class="policy-diagrams" aria-label="Illustrated comparison of four observation policies">
+<div class="policy-card">
+<h4>Static</h4><p>Observe only at the beginning.</p>
+<svg viewBox="0 0 320 92" role="img" aria-label="Step 0 is observed; steps 1 through 16 have no further scheduled observations." xmlns="http://www.w3.org/2000/svg">
+<rect x="4" y="10" width="17" height="35" rx="3" fill="#287fad"/>
+<g fill="#e6ecf2" stroke="#cbd5e1" stroke-width=".6"><rect x="22" y="10" width="17" height="35" rx="3"/><rect x="40" y="10" width="17" height="35" rx="3"/><rect x="58" y="10" width="17" height="35" rx="3"/><rect x="76" y="10" width="17" height="35" rx="3"/><rect x="94" y="10" width="17" height="35" rx="3"/><rect x="112" y="10" width="17" height="35" rx="3"/><rect x="130" y="10" width="17" height="35" rx="3"/><rect x="148" y="10" width="17" height="35" rx="3"/><rect x="166" y="10" width="17" height="35" rx="3"/><rect x="184" y="10" width="17" height="35" rx="3"/><rect x="202" y="10" width="17" height="35" rx="3"/><rect x="220" y="10" width="17" height="35" rx="3"/><rect x="238" y="10" width="17" height="35" rx="3"/><rect x="256" y="10" width="17" height="35" rx="3"/><rect x="274" y="10" width="17" height="35" rx="3"/><rect x="292" y="10" width="17" height="35" rx="3"/></g>
+<g font-family="Arial,sans-serif" font-size="10" text-anchor="middle" fill="#59697c"><text x="12" y="60">0</text><text x="84" y="60">4</text><text x="156" y="60">8</text><text x="228" y="60">12</text><text x="300" y="60">16</text></g>
+<text x="5" y="80" fill="#496173" font-family="Arial,sans-serif" font-size="11">One scan; memory may become stale.</text>
+</svg>
+</div>
+<div class="policy-card">
+<h4>Periodic</h4><p>Refresh every four steps.</p>
+<svg viewBox="0 0 320 92" role="img" aria-label="Memory observation occurs at steps 0, 4, 8, 12, and 16." xmlns="http://www.w3.org/2000/svg">
+<g fill="#e6ecf2" stroke="#cbd5e1" stroke-width=".6"><rect x="4" y="10" width="17" height="35" rx="3"/><rect x="22" y="10" width="17" height="35" rx="3"/><rect x="40" y="10" width="17" height="35" rx="3"/><rect x="58" y="10" width="17" height="35" rx="3"/><rect x="76" y="10" width="17" height="35" rx="3"/><rect x="94" y="10" width="17" height="35" rx="3"/><rect x="112" y="10" width="17" height="35" rx="3"/><rect x="130" y="10" width="17" height="35" rx="3"/><rect x="148" y="10" width="17" height="35" rx="3"/><rect x="166" y="10" width="17" height="35" rx="3"/><rect x="184" y="10" width="17" height="35" rx="3"/><rect x="202" y="10" width="17" height="35" rx="3"/><rect x="220" y="10" width="17" height="35" rx="3"/><rect x="238" y="10" width="17" height="35" rx="3"/><rect x="256" y="10" width="17" height="35" rx="3"/><rect x="274" y="10" width="17" height="35" rx="3"/><rect x="292" y="10" width="17" height="35" rx="3"/></g>
+<g fill="#287fad"><rect x="4" y="10" width="17" height="35" rx="3"/><rect x="76" y="10" width="17" height="35" rx="3"/><rect x="148" y="10" width="17" height="35" rx="3"/><rect x="220" y="10" width="17" height="35" rx="3"/><rect x="292" y="10" width="17" height="35" rx="3"/></g>
+<g font-family="Arial,sans-serif" font-size="10" text-anchor="middle" fill="#59697c"><text x="12" y="60">0</text><text x="84" y="60">4</text><text x="156" y="60">8</text><text x="228" y="60">12</text><text x="300" y="60">16</text></g>
+<text x="5" y="80" fill="#496173" font-family="Arial,sans-serif" font-size="11">Fixed times, regardless of map changes.</text>
+</svg>
+</div>
+<div class="policy-card">
+<h4>Age</h4><p>Scan when enough nearby known cells are stale.</p>
+<svg viewBox="0 0 320 100" role="img" aria-label="Illustrative local map: six of ten known cells are at least four steps old, meeting the 50 percent age threshold." xmlns="http://www.w3.org/2000/svg">
+<g stroke="#fff" stroke-width="2">
+<rect x="14" y="12" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="50" y="12" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="86" y="12" width="34" height="27" rx="4" fill="#e1ebf3"/><rect x="122" y="12" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="158" y="12" width="34" height="27" rx="4" fill="#e1ebf3"/>
+<rect x="14" y="41" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="50" y="41" width="34" height="27" rx="4" fill="#e1ebf3"/><rect x="86" y="41" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="122" y="41" width="34" height="27" rx="4" fill="#e1ebf3"/><rect x="158" y="41" width="34" height="27" rx="4" fill="#d9a96c"/>
+</g>
+<text x="210" y="28" font-size="12" font-family="Arial,sans-serif" fill="#3f5265">6 / 10 stale</text><text x="210" y="47" font-size="12" font-family="Arial,sans-serif" fill="#3f5265">60% ≥ 50%</text><text x="210" y="66" font-size="12" font-family="Arial,sans-serif" font-weight="bold" fill="#22769f">Observe</text>
+<text x="14" y="87" font-size="11" font-family="Arial,sans-serif" fill="#59697c">Amber = ≥ 4 steps old; illustration only.</text>
+</svg>
+</div>
+<div class="policy-card">
+<h4>Uncertainty</h4><p>Scan when mean nearby known-cell entropy is high.</p>
+<svg viewBox="0 0 320 100" role="img" aria-label="Illustrative set of known cells with entropy values 0.8, 0.9, 0.6, 0.8, and 0.9 bits. The mean is 0.8 bits, exceeding the 0.75-bit threshold." xmlns="http://www.w3.org/2000/svg">
+<g font-family="Arial,sans-serif" font-size="12" text-anchor="middle">
+<rect x="8" y="19" width="39" height="33" rx="5" fill="#c4e3f2"/><rect x="50" y="19" width="39" height="33" rx="5" fill="#9ed0e8"/><rect x="92" y="19" width="39" height="33" rx="5" fill="#e1edf4"/><rect x="134" y="19" width="39" height="33" rx="5" fill="#c4e3f2"/><rect x="176" y="19" width="39" height="33" rx="5" fill="#9ed0e8"/>
+<text x="27" y="40" fill="#244964">.8</text><text x="69" y="40" fill="#244964">.9</text><text x="111" y="40" fill="#244964">.6</text><text x="153" y="40" fill="#244964">.8</text><text x="195" y="40" fill="#244964">.9</text>
+</g>
+<text x="222" y="28" font-size="11.5" font-family="Arial,sans-serif" fill="#3f5265">Mean .80</text><text x="222" y="47" font-size="11.5" font-family="Arial,sans-serif" fill="#3f5265">≥ .75 bits</text><text x="222" y="66" font-size="11.5" font-family="Arial,sans-serif" font-weight="bold" fill="#22769f">Observe</text>
+<text x="8" y="84" font-size="11" font-family="Arial,sans-serif" fill="#59697c">Numbers are illustrative entropy scores (bits).</text>
+</svg>
+</div>
+</div>
+<p class="small">Blue timeline cells represent observations, gray cells no observation. The Age and Uncertainty diagrams are illustrative examples of trigger calculations, <em>not recorded rollout data</em>. For both adaptive policies, the decision region is a 3-cell-radius circle around G1, while the actual sensor still looks only 120° forward. Neither adaptive trigger directly considers the goal or planned route. All policies begin with an observation at step 0; the <strong>20-call budget includes that initial scan</strong>.</p>
+<p><strong>Important distinction:</strong> the independent <strong>Emergency Safety Sensor</strong> is different from a scheduled memory observation. It scans <strong>360° within 2 m using 61 rays every simulation step</strong> to protect selected actions, but it <strong>does not update the spatial occupancy memory</strong>. Even Static still receives this near-field safety scan; the reported memory-observation counts exclude it.</p>
+<p class="small">Method definitions: <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/src/spatial_memory/scheduling.py">observation scheduling code</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/src/spatial_memory/mujoco_perception.py">MuJoCo ray sensor</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/scripts/evaluate_phase2_61ray_emergency_safety_full_288.py">frozen Phase 2 evaluation</a>.</p>
 <p>I prepared and reused <strong>36 saved development environments</strong>, with 12 from each of three floor-plan families: <strong>R (Room Graph)</strong>, containing rooms connected by narrow doors; <strong>BP (B-prime Rectangular Partition)</strong>, containing rectangular rooms connected by selected doorways; and <strong>M (Maze)</strong>, containing narrow, winding corridors. All layouts are based on saved 25 × 25 grids, not newly generated scenes for these comparisons.</p>
 <div class="maze-overview">
 <h3>The 36 development environments</h3>
