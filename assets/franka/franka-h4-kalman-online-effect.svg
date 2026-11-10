@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="420" viewBox="0 0 820 420" role="img" aria-labelledby="title desc">
+<title id="title">Online Kalman replanning improvement over one-shot adaptation</title>
+<desc id="desc">Six positive paired success-rate differences, in percentage points. For clean-to-noisy, seeds 42, 123, and 456 improve by 0.8, 3.4, and 0.9 points. For noisy-to-clean, they improve by 1.7, 0.7, and 1.4 points. Overall gain is 1.48 points with 95 percent paired bootstrap confidence interval 0.92 to 2.08.</desc>
+<rect width="820" height="420" fill="#fff"/>
+<text x="32" y="29" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="600" fill="#222">Kalman Online − OneShot</text>
+<text x="32" y="50" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="#6b7280">Change in grasp success (percentage points) · 1,000 paired trials per bar</text>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="32" y="85" font-size="15" font-weight="600" fill="#1772d0">0 → 10 mm noise</text>
+<text x="32" y="238" font-size="15" font-weight="600" fill="#c77515">10 → 0 mm noise</text>
+<line x1="270" y1="74" x2="270" y2="364" stroke="#aeb6c1" stroke-width="1.5"/><text x="270" y="385" font-size="12" fill="#68717d" text-anchor="middle">0</text>
+<line x1="375" y1="74" x2="375" y2="364" stroke="#e5e9ed" stroke-width="1"/><text x="375" y="385" font-size="12" fill="#68717d" text-anchor="middle">1</text>
+<line x1="480" y1="74" x2="480" y2="364" stroke="#e5e9ed" stroke-width="1"/><text x="480" y="385" font-size="12" fill="#68717d" text-anchor="middle">2</text>
+<line x1="585" y1="74" x2="585" y2="364" stroke="#e5e9ed" stroke-width="1"/><text x="585" y="385" font-size="12" fill="#68717d" text-anchor="middle">3</text>
+<line x1="690" y1="74" x2="690" y2="364" stroke="#e5e9ed" stroke-width="1"/><text x="690" y="385" font-size="12" fill="#68717d" text-anchor="middle">4</text>
+<text x="32" y="117" font-size="14" fill="#333">Seed 42</text><rect x="270" y="99" width="84" height="25" rx="4" fill="#1772d0" opacity=".88"/><text x="363" y="117" font-size="14" font-weight="600" fill="#222">+0.8</text>
+<text x="32" y="156" font-size="14" fill="#333">Seed 123</text><rect x="270" y="138" width="357" height="25" rx="4" fill="#1772d0" opacity=".88"/><text x="636" y="156" font-size="14" font-weight="600" fill="#222">+3.4</text>
+<text x="32" y="195" font-size="14" fill="#333">Seed 456</text><rect x="270" y="177" width="94.5" height="25" rx="4" fill="#1772d0" opacity=".88"/><text x="373.5" y="195" font-size="14" font-weight="600" fill="#222">+0.9</text>
+<text x="32" y="270" font-size="14" fill="#333">Seed 42</text><rect x="270" y="252" width="178.5" height="25" rx="4" fill="#c77515" opacity=".88"/><text x="457.5" y="270" font-size="14" font-weight="600" fill="#222">+1.7</text>
+<text x="32" y="309" font-size="14" fill="#333">Seed 123</text><rect x="270" y="291" width="73.5" height="25" rx="4" fill="#c77515" opacity=".88"/><text x="352.5" y="309" font-size="14" font-weight="600" fill="#222">+0.7</text>
+<text x="32" y="348" font-size="14" fill="#333">Seed 456</text><rect x="270" y="330" width="147" height="25" rx="4" fill="#c77515" opacity=".88"/><text x="426" y="348" font-size="14" font-weight="600" fill="#222">+1.4</text>
+<text x="480" y="411" text-anchor="middle" font-size="12" fill="#68717d">Success-rate improvement (pp); zero means no improvement</text>
+</g></svg>

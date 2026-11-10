@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Spatial memory for simulated Unitree G1 navigation: 288 matched 80-step episodes, 61-ray emergency sensing, 60 of 63 failed runs recovered by step 400, and one more by step 800.">
+<title>Humanoid Spatial Memory | Masahiro Fujita</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:#222;font:16px/1.65 Arial,Helvetica,sans-serif}
+main{width:min(840px,100%);margin:auto;padding:35px 30px 22px}
+a{color:#1772d0;text-decoration:none}a:hover{color:#c77515}a:focus-visible{outline:2px solid #1772d0;outline-offset:4px;border-radius:2px}
+.back{font-size:14px}
+header{text-align:center;padding:30px 0 20px}
+h1{font-size:36px;line-height:1.25;font-weight:400;margin:0 0 12px}
+h2{font-size:23px;line-height:1.3;font-weight:600;margin:0 0 14px}
+h3{font-size:18px;line-height:1.4;font-weight:600;margin:22px 0 9px}
+p{margin:0 0 14px}.subtitle{color:#666;margin:0 0 12px}.tags{color:#666;font-size:14px}
+hr{border:0;height:1px;background:linear-gradient(to right,transparent,#aaa 15%,#aaa 85%,transparent);margin:23px 0 29px}
+section{padding:0 10px;margin-bottom:28px}.section-no{color:#777;font-size:13px;letter-spacing:.07em;text-transform:uppercase;margin:0 0 9px}
+.abstract{padding:0 10px;margin-bottom:26px}.abstract h2{font-size:19px;margin-bottom:10px}.abstract p{line-height:1.72}
+.facts{font-size:13px;color:#777;margin:9px 0 0}
+figure{margin:17px 0 20px}.figure-image{display:block;width:100%;height:auto;border:1px solid #e5e5e5;border-radius:9px;background:#fafafa}
+figcaption,.small{font-size:13px;color:#777;line-height:1.55}figcaption{margin-top:8px}
+.takeaway{border-left:2px solid #bbb;padding:4px 0 4px 16px;margin:16px 0 19px}
+.research-path{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin:18px 0;padding:0;list-style:none}
+.research-step{border:1px solid #e5e5e5;border-radius:8px;padding:13px 15px;background:#fafafa}
+.research-step strong{display:block;color:#333;font-size:14px;margin-bottom:5px}
+.research-step span{display:block;color:#555;font-size:13px;line-height:1.5}
+.table-scroll{overflow-x:auto;margin:16px 0 8px;border:1px solid #e5e5e5;border-radius:9px}
+.results-table{border-collapse:collapse;width:100%;min-width:650px;font-size:14px;line-height:1.5}
+.results-table th,.results-table td{padding:11px 12px;border-bottom:1px solid #e9edf0;text-align:left;white-space:nowrap}
+.results-table th{font-weight:600;background:#fafafa;color:#555;font-size:13px}
+.results-table td:not(:first-child),.results-table th:not(:first-child){text-align:right}
+.results-table tr:last-child td{border-bottom:0}.results-table .highlight td:first-child{font-weight:600}
+.results-table caption{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+ul{padding-left:22px;margin:0 0 17px}li{margin:7px 0}
+.sources{font-size:14px;margin-top:16px}.sources a{overflow-wrap:anywhere}
+.maze-sheet{display:block;overflow-x:auto;border:1px solid #e5e5e5;border-radius:9px;background:#f7f9fb}
+.maze-sheet img{display:block;width:100%;min-width:620px;height:auto}
+.maze-overview{margin:22px 0 18px}
+.maze-overview figcaption{margin-top:8px}
+.maze-gallery{display:grid;gap:17px;margin:16px 0}
+.maze-gallery figure{margin:0}
+.figure-link{display:inline-block;font-size:14px;margin-top:6px}
+.metrics-note{font-size:14px;color:#555}
+@media(max-width:600px){.maze-sheet img{min-width:620px}}
+footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
+@media(max-width:600px){main{padding:25px 21px 15px}h1{font-size:29px}section,.abstract{padding:0}.research-path{grid-template-columns:1fr;gap:7px}.research-step{padding:10px 12px}}
+
+/* Experimental-design explanations: responsive, self-contained diagrams. */
+.method-figure{border:1px solid #e2e8ef;border-radius:10px;padding:16px;margin:18px 0;background:#fbfcfe}
+.method-figure svg{display:block;width:100%;height:auto;max-height:250px}
+.method-figure figcaption{margin-top:8px}
+.method-heading{margin-top:26px}
+.knowledge-table{min-width:580px;table-layout:fixed}
+.knowledge-table th:nth-child(1),.knowledge-table td:nth-child(1){width:31%;text-align:left}
+.knowledge-table th:nth-child(2),.knowledge-table td:nth-child(2){width:19%;text-align:left}
+.knowledge-table th:nth-child(3),.knowledge-table td:nth-child(3){width:50%;text-align:left;white-space:normal}
+.policy-definition-table{min-width:640px}
+.policy-definition-table th,.policy-definition-table td{text-align:left!important;white-space:normal}
+.policy-definition-table th:first-child{width:19%}
+.policy-diagrams{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.policy-card{border:1px solid #e2e8ef;border-radius:10px;padding:14px;background:#fbfcfe}
+.policy-card h4{font-size:15px;margin:0 0 3px;color:#273445}
+.policy-card p{font-size:13px;color:#566374;line-height:1.5;margin:0 0 10px}
+.policy-card svg{display:block;width:100%;height:auto}
+.policy-diagram-caption{font-size:12px;color:#667386;margin-top:7px;line-height:1.5}
+.memory-legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:#566374;margin:8px 0 0}
+.memory-legend span{display:inline-flex;align-items:center;gap:5px}
+.memory-key{width:11px;height:11px;border:1px solid #b8c4d0;display:inline-block;border-radius:2px}
+@media(max-width:600px){.method-figure{padding:10px}.policy-diagrams{grid-template-columns:1fr;gap:9px}.policy-card{padding:12px}.knowledge-table{min-width:530px}}
+</style>
+</head>
+<body><main>
+<a class="back" href="../index.html#projects">← Masahiro Fujita / Projects</a>
+<header>
+<h1>Humanoid Spatial Memory</h1>
+<p class="subtitle">3D Perception and Navigation in Changing Indoor Environments</p>
+<p class="tags">MuJoCo · Unitree G1 · Ray Casting · Spatial Memory · A* · Kinematic Navigation</p>
+</header>
+<hr>
+<section class="abstract" aria-labelledby="abstract-heading">
+<h2 id="abstract-heading">Abstract</h2>
+<p>How should a humanoid robot update spatial memory and navigate around changing indoor obstacles without unnecessary contact? I developed a <strong>Unitree G1 MuJoCo</strong> simulation with 3D ray sensing, 2D occupancy memory, four observation policies (Static, Periodic, Age, and Uncertainty), A* planning, and selected-action collision checks. In 288 matched 80-step episodes on 36 saved development environments, an initially overconservative turn-clearance approximation reduced goal completion to <strong>21/288 (7.3%)</strong>; correcting the selected-turn logic recovered <strong>225/288 (78.1%)</strong>. After conservative lateral avoidance and independent <strong>61-ray emergency sensing</strong>, the 288-episode evaluation retained <strong>225 goal completions with zero unwanted contacts</strong>. To separate time-limit failures from persistent route failures, I replayed the 63 initially unsuccessful episodes with a 400-step horizon: <strong>60/63 reached the goal contact-free</strong> (mean goal step 151.73). Raising the limit to 800 rescued one of the remaining three at step 479, while two Static-policy episodes still failed when the planner reported no feasible forward route. These are development-set results using <strong>kinematic root navigation</strong> and non-reactive capsule pedestrian proxies, not demonstrated physical bipedal walking or real-world safety.</p>
+<p class="facts">36 saved development environments (12 each of Room Graph, Rectangular Partition, and Maze) · Two schedules per world · Four observation policies · Seed 42 · Initial 80-step benchmark, followed by 400- and 800-step continuations of unsuccessful episodes · Maximum 20 spatial-memory observations · Assumed 0.75 m/grid cell</p>
+</section>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-split_screen.gif" alt="Synchronized two-panel animation of a simulated Unitree G1 moving through an indoor MuJoCo maze on the left and its route, current position, start, and goal on an overhead map on the right." width="1920" height="720" decoding="async">
+<figcaption>A synchronized replay of a saved MuJoCo navigation trajectory. The left view shows G1 with presentation-only walking animation; the right view shows its position and route on an overhead map, including the start and goal. This historical demonstration is illustrative, not an episode from the 288-episode comparison.</figcaption>
+</figure>
+<p class="small">An earlier, separate <a href="../assets/spatial-memory/g1-route-animated.svg">overhead route animation</a> is also available.</p>
+<hr>
+<section aria-labelledby="question-heading">
+<p class="section-no">01 / Research Question</p>
+<h2 id="question-heading">When is a remembered map worth checking again?</h2>
+<p>A corridor that was clear yesterday may be blocked by furniture today. A passing person, however, should not necessarily be recorded as a permanent wall. Re-observing everything continuously is expensive, but trusting an old map can lead to failed routes. This project studies how different observation schedules balance navigation success, sensing cost, and map freshness in changing indoor spaces.</p>
+<p>Rather than claiming a new memory algorithm, I first evaluated established scheduling approaches in a shared, reproducible simulation. The same underlying robot model, sensor, planner, environment instances, and observation cap were used for all four policies.</p>
+</section>
+<hr>
+<section aria-labelledby="system-heading">
+<p class="section-no">02 / System</p>
+<h2 id="system-heading">From MuJoCo rays to collision-checked actions</h2>
+<ol class="research-path">
+<li class="research-step"><strong>1. Partial 3D sensing</strong><span>A torso-mounted horizontal ray scanner detects visible surfaces with 61 rays, a 120° field of view, and a 6 m range. Hidden cells remain unknown.</span></li>
+<li class="research-step"><strong>2. Spatial memory</strong><span>Measurements are projected onto a 2D grid: unknown, free, or occupied. The memory controller decides when another observation is taken.</span></li>
+<li class="research-step"><strong>3. Footprint-aware routing</strong><span>A* (pronounced A-star), a shortest-path search algorithm, searches position-and-heading states using remembered obstacles and the public dimensions of G1. Rejected actions are tracked separately from occupancy memory.</span></li>
+<li class="research-step"><strong>4. MuJoCo collision checks</strong><span>Only the chosen movement is checked against 3D geometry before execution. Rotation and translation can be rejected without granting the planner a hidden map.</span></li>
+</ol>
+<p>Walls, changing objects, and moving capsule-shaped pedestrian proxies exist in the MuJoCo scene. These simplified geometric proxies represent moving obstacles, not animated human figures. The agent receives measured occupancy, not simulator obstacle labels or future proxy trajectories. The proxies follow predefined motion and do not react to G1.</p>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-demo.gif" alt="Close-up replay of a Unitree G1 humanoid moving and turning in a simulated indoor maze, with visually animated arms and legs." width="1280" height="720" loading="lazy" decoding="async">
+<figcaption>Close-up G1 presentation replay. The arm and leg movements are for visualization only; the navigation uses kinematic root motion rather than physically actuated bipedal walking.</figcaption>
+</figure>
+<div class="takeaway">The key distinction is between <strong>what the robot observes</strong>, <strong>what it remembers</strong>, and <strong>whether its actual body can fit along a planned route</strong>.</div>
+</section>
+<hr>
+<section aria-labelledby="study-heading">
+<p class="section-no">03 / Experimental Design</p>
+<h2 id="study-heading">Four policies, matched conditions</h2>
+<p>All four policies use the <strong>same G1 model, sensor, occupancy memory and navigation planner</strong>. They differ in one decision: <strong>when to request a new spatial-memory observation</strong>.</p>
+
+<h3 class="method-heading">What counts as an observation?</h3>
+<p>An <strong>observation</strong> is one authorized scan by a torso-mounted MuJoCo ray sensor. From the robot's current heading, it casts <strong>61 horizontal rays across a 120° forward field of view (±60°)</strong>, up to <strong>6 m</strong> (about eight 0.75 m grid cells). The rays sample free space up to the first measured surface: walls, obstacles or pedestrians block the view behind them. This is a <strong>single horizontal scanning plane</strong>, not a depth camera or a full 3D point cloud.</p>
+<figure class="method-figure">
+<svg viewBox="0 0 710 238" role="img" aria-labelledby="fov-title fov-desc" xmlns="http://www.w3.org/2000/svg">
+<title id="fov-title">Forward field of view of the G1 spatial-memory sensor</title>
+<desc id="fov-desc">The robot faces right. A 120-degree sector extends six meters in front of the robot. A wall blocks the rays, leaving the area behind the wall unobserved.</desc>
+<defs><pattern id="method-grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" stroke="#cbd5e1" stroke-width="0.7" fill="none"/></pattern></defs>
+<rect x="3" y="3" width="704" height="232" rx="8" fill="#f4f8fb"/>
+<rect x="12" y="12" width="686" height="212" fill="url(#method-grid)"/>
+<path d="M180 118L343 24A188 188 0 0 1 343 212Z" fill="#93c9ee" fill-opacity=".45" stroke="#2985bc" stroke-width="1.7" stroke-dasharray="5 4"/>
+<path d="M180 118L368 118M180 118L343 24M180 118L343 212M180 118L356 54M180 118L356 182" stroke="#2689bc" stroke-width="1.1" stroke-opacity=".65" fill="none"/>
+<rect x="292" y="72" width="20" height="92" rx="2" fill="#6b7789"/>
+<rect x="312" y="72" width="57" height="92" fill="#dce4ed" fill-opacity=".92"/>
+<path d="M180 118L292 118" stroke="#1477ac" stroke-width="2.8" stroke-linecap="round"/>
+<circle cx="180" cy="118" r="17" fill="#2977ad" stroke="#fff" stroke-width="3"/>
+<path d="M177 109l11 9-11 9z" fill="white"/>
+<text x="180" y="152" fill="#26394e" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="bold">G1</text>
+<text x="260" y="30" fill="#266b94" font-family="Arial,sans-serif" font-size="14" font-weight="bold">120° FOV</text>
+<text x="305" y="62" text-anchor="middle" fill="#394d60" font-family="Arial,sans-serif" font-size="12">Wall</text>
+<text x="340" y="111" text-anchor="middle" fill="#586878" font-family="Arial,sans-serif" font-size="11">Hidden</text>
+<text x="340" y="125" text-anchor="middle" fill="#586878" font-family="Arial,sans-serif" font-size="11">area</text>
+<path d="M433 118h39" stroke="#2985bc" stroke-width="3"/><circle cx="453" cy="118" r="4.5" fill="#2985bc"/>
+<text x="485" y="112" font-family="Arial,sans-serif" font-size="14" fill="#24374b" font-weight="bold">61 rays, every 2°</text>
+<text x="485" y="132" font-family="Arial,sans-serif" font-size="12" fill="#586878">Maximum range: 6 m</text>
+<text x="485" y="152" font-family="Arial,sans-serif" font-size="12" fill="#586878">Torso-mounted sensor</text>
+<text x="485" y="172" font-family="Arial,sans-serif" font-size="12" fill="#586878">Occluded cells stay unseen</text>
+</svg>
+<figcaption>Conceptual top-down illustration (not to scale). The blue sector shows the sensor's possible view; the wall blocks rays, so the region behind it is not measured. Rotating G1 rotates the sector with it.</figcaption>
+</figure>
+<p>Each observation produces a <strong>2D occupancy grid</strong>: <code>0</code> means observed free, <code>1</code> means observed occupied, and <code>-1</code> means unknown or unobserved. Only measured cells replace their previous memory values; cells hidden behind obstacles retain whatever the robot previously remembered. An observation is <strong>not</strong> a full map refresh.</p>
+<div class="memory-legend" aria-label="Occupancy map legend">
+<span><i class="memory-key" style="background:#f0faf4"></i><code>0</code> Free</span>
+<span><i class="memory-key" style="background:#687687"></i><code>1</code> Occupied</span>
+<span><i class="memory-key" style="background:#e7ebf0"></i><code>-1</code> Unknown</span>
+</div>
+
+<h3 class="method-heading">What does the robot already know?</h3>
+<p>The experiment <strong>assumes accurate self-localization</strong>; localization is not learned from the observation rays. The start and goal coordinates are provided, and the simulation maintains G1's current grid position and heading as it moves and turns.</p>
+<div class="table-scroll">
+<table class="results-table knowledge-table">
+<caption>Robot-accessible information and its source in the Phase 2 simulator</caption>
+<thead><tr><th scope="col">Information</th><th scope="col">Known?</th><th scope="col">Source</th></tr></thead>
+<tbody>
+<tr><td>Start coordinates</td><td>Yes</td><td>Provided at episode initialization</td></tr>
+<tr><td>Goal coordinates</td><td>Yes</td><td>Provided as the navigation target</td></tr>
+<tr><td>Current position (x, y)</td><td>Yes</td><td>Simulation-maintained robot pose; no localization error is modeled</td></tr>
+<tr><td>Current heading (yaw)</td><td>Yes</td><td>Initial heading and executed robot turns</td></tr>
+<tr><td>Nearby walls and obstacles</td><td>Partially</td><td>Authorized forward-ray observations and retained occupancy memory</td></tr>
+<tr><td>Space behind occlusions</td><td>Not directly</td><td>Only any previously observed information is remembered</td></tr>
+<tr><td>Future pedestrian motion</td><td>No</td><td>Future schedules and simulator ground truth are withheld from the agent</td></tr>
+</tbody></table>
+</div>
+<p class="small">Navigation also receives feedback when a <em>selected</em> movement is rejected by MuJoCo collision checks; rejected actions are tracked separately from the occupancy map. It does not receive collision checks for every possible unselected action.</p>
+
+<h3 class="method-heading">How the four observation policies work</h3>
+<div class="table-scroll">
+<table class="results-table policy-definition-table">
+<caption>Fixed observation-scheduling rules in the matched Phase 2 experiment</caption>
+<thead><tr><th scope="col">Policy</th><th scope="col">When another memory observation is requested</th></tr></thead>
+<tbody>
+<tr><td><strong>Static</strong></td><td>Never after the mandatory observation at step 0.</td></tr>
+<tr><td><strong>Periodic</strong></td><td>Every four steps: 0, 4, 8, 12, 16, …, until the budget is exhausted.</td></tr>
+<tr><td><strong>Age</strong></td><td>When at least <strong>50%</strong> of the <em>previously observed</em> cells within a <strong>3-cell radius</strong> of the current position were last observed <strong>4 or more steps ago</strong>.</td></tr>
+<tr><td><strong>Uncertainty</strong></td><td>When the <strong>mean binary entropy ≥ 0.75 bits</strong> for previously observed cells within the same 3-cell radius. Entropy is estimated from time since observation and observed occupancy flips; never-seen cells are excluded from this score.</td></tr>
+</tbody></table>
+</div>
+<div class="policy-diagrams" aria-label="Illustrated comparison of four observation policies">
+<div class="policy-card">
+<h4>Static</h4><p>Observe only at the beginning.</p>
+<svg viewBox="0 0 320 92" role="img" aria-label="Step 0 is observed; steps 1 through 16 have no further scheduled observations." xmlns="http://www.w3.org/2000/svg">
+<rect x="4" y="10" width="17" height="35" rx="3" fill="#287fad"/>
+<g fill="#e6ecf2" stroke="#cbd5e1" stroke-width=".6"><rect x="22" y="10" width="17" height="35" rx="3"/><rect x="40" y="10" width="17" height="35" rx="3"/><rect x="58" y="10" width="17" height="35" rx="3"/><rect x="76" y="10" width="17" height="35" rx="3"/><rect x="94" y="10" width="17" height="35" rx="3"/><rect x="112" y="10" width="17" height="35" rx="3"/><rect x="130" y="10" width="17" height="35" rx="3"/><rect x="148" y="10" width="17" height="35" rx="3"/><rect x="166" y="10" width="17" height="35" rx="3"/><rect x="184" y="10" width="17" height="35" rx="3"/><rect x="202" y="10" width="17" height="35" rx="3"/><rect x="220" y="10" width="17" height="35" rx="3"/><rect x="238" y="10" width="17" height="35" rx="3"/><rect x="256" y="10" width="17" height="35" rx="3"/><rect x="274" y="10" width="17" height="35" rx="3"/><rect x="292" y="10" width="17" height="35" rx="3"/></g>
+<g font-family="Arial,sans-serif" font-size="10" text-anchor="middle" fill="#59697c"><text x="12" y="60">0</text><text x="84" y="60">4</text><text x="156" y="60">8</text><text x="228" y="60">12</text><text x="300" y="60">16</text></g>
+<text x="5" y="80" fill="#496173" font-family="Arial,sans-serif" font-size="11">One scan; memory may become stale.</text>
+</svg>
+</div>
+<div class="policy-card">
+<h4>Periodic</h4><p>Refresh every four steps.</p>
+<svg viewBox="0 0 320 92" role="img" aria-label="Memory observation occurs at steps 0, 4, 8, 12, and 16." xmlns="http://www.w3.org/2000/svg">
+<g fill="#e6ecf2" stroke="#cbd5e1" stroke-width=".6"><rect x="4" y="10" width="17" height="35" rx="3"/><rect x="22" y="10" width="17" height="35" rx="3"/><rect x="40" y="10" width="17" height="35" rx="3"/><rect x="58" y="10" width="17" height="35" rx="3"/><rect x="76" y="10" width="17" height="35" rx="3"/><rect x="94" y="10" width="17" height="35" rx="3"/><rect x="112" y="10" width="17" height="35" rx="3"/><rect x="130" y="10" width="17" height="35" rx="3"/><rect x="148" y="10" width="17" height="35" rx="3"/><rect x="166" y="10" width="17" height="35" rx="3"/><rect x="184" y="10" width="17" height="35" rx="3"/><rect x="202" y="10" width="17" height="35" rx="3"/><rect x="220" y="10" width="17" height="35" rx="3"/><rect x="238" y="10" width="17" height="35" rx="3"/><rect x="256" y="10" width="17" height="35" rx="3"/><rect x="274" y="10" width="17" height="35" rx="3"/><rect x="292" y="10" width="17" height="35" rx="3"/></g>
+<g fill="#287fad"><rect x="4" y="10" width="17" height="35" rx="3"/><rect x="76" y="10" width="17" height="35" rx="3"/><rect x="148" y="10" width="17" height="35" rx="3"/><rect x="220" y="10" width="17" height="35" rx="3"/><rect x="292" y="10" width="17" height="35" rx="3"/></g>
+<g font-family="Arial,sans-serif" font-size="10" text-anchor="middle" fill="#59697c"><text x="12" y="60">0</text><text x="84" y="60">4</text><text x="156" y="60">8</text><text x="228" y="60">12</text><text x="300" y="60">16</text></g>
+<text x="5" y="80" fill="#496173" font-family="Arial,sans-serif" font-size="11">Fixed times, regardless of map changes.</text>
+</svg>
+</div>
+<div class="policy-card">
+<h4>Age</h4><p>Scan when enough nearby known cells are stale.</p>
+<svg viewBox="0 0 320 100" role="img" aria-label="Illustrative local map: six of ten known cells are at least four steps old, meeting the 50 percent age threshold." xmlns="http://www.w3.org/2000/svg">
+<g stroke="#fff" stroke-width="2">
+<rect x="14" y="12" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="50" y="12" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="86" y="12" width="34" height="27" rx="4" fill="#e1ebf3"/><rect x="122" y="12" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="158" y="12" width="34" height="27" rx="4" fill="#e1ebf3"/>
+<rect x="14" y="41" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="50" y="41" width="34" height="27" rx="4" fill="#e1ebf3"/><rect x="86" y="41" width="34" height="27" rx="4" fill="#d9a96c"/><rect x="122" y="41" width="34" height="27" rx="4" fill="#e1ebf3"/><rect x="158" y="41" width="34" height="27" rx="4" fill="#d9a96c"/>
+</g>
+<text x="210" y="28" font-size="12" font-family="Arial,sans-serif" fill="#3f5265">6 / 10 stale</text><text x="210" y="47" font-size="12" font-family="Arial,sans-serif" fill="#3f5265">60% ≥ 50%</text><text x="210" y="66" font-size="12" font-family="Arial,sans-serif" font-weight="bold" fill="#22769f">Observe</text>
+<text x="14" y="87" font-size="11" font-family="Arial,sans-serif" fill="#59697c">Amber = ≥ 4 steps old; illustration only.</text>
+</svg>
+</div>
+<div class="policy-card">
+<h4>Uncertainty</h4><p>Scan when mean nearby known-cell entropy is high.</p>
+<svg viewBox="0 0 320 100" role="img" aria-label="Illustrative set of known cells with entropy values 0.8, 0.9, 0.6, 0.8, and 0.9 bits. The mean is 0.8 bits, exceeding the 0.75-bit threshold." xmlns="http://www.w3.org/2000/svg">
+<g font-family="Arial,sans-serif" font-size="12" text-anchor="middle">
+<rect x="8" y="19" width="39" height="33" rx="5" fill="#c4e3f2"/><rect x="50" y="19" width="39" height="33" rx="5" fill="#9ed0e8"/><rect x="92" y="19" width="39" height="33" rx="5" fill="#e1edf4"/><rect x="134" y="19" width="39" height="33" rx="5" fill="#c4e3f2"/><rect x="176" y="19" width="39" height="33" rx="5" fill="#9ed0e8"/>
+<text x="27" y="40" fill="#244964">.8</text><text x="69" y="40" fill="#244964">.9</text><text x="111" y="40" fill="#244964">.6</text><text x="153" y="40" fill="#244964">.8</text><text x="195" y="40" fill="#244964">.9</text>
+</g>
+<text x="222" y="28" font-size="11.5" font-family="Arial,sans-serif" fill="#3f5265">Mean .80</text><text x="222" y="47" font-size="11.5" font-family="Arial,sans-serif" fill="#3f5265">≥ .75 bits</text><text x="222" y="66" font-size="11.5" font-family="Arial,sans-serif" font-weight="bold" fill="#22769f">Observe</text>
+<text x="8" y="84" font-size="11" font-family="Arial,sans-serif" fill="#59697c">Numbers are illustrative entropy scores (bits).</text>
+</svg>
+</div>
+</div>
+<p class="small">Blue timeline cells represent observations, gray cells no observation. The Age and Uncertainty diagrams are illustrative examples of trigger calculations, <em>not recorded rollout data</em>. For both adaptive policies, the decision region is a 3-cell-radius circle around G1, while the actual sensor still looks only 120° forward. Neither adaptive trigger directly considers the goal or planned route. All policies begin with an observation at step 0; the <strong>20-call budget includes that initial scan</strong>.</p>
+<p><strong>Important distinction:</strong> the independent <strong>Emergency Safety Sensor</strong> is different from a scheduled memory observation. It scans <strong>360° within 2 m using 61 rays every simulation step</strong> to protect selected actions, but it <strong>does not update the spatial occupancy memory</strong>. Even Static still receives this near-field safety scan; the reported memory-observation counts exclude it.</p>
+<p class="small">Method definitions: <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/src/spatial_memory/scheduling.py">observation scheduling code</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/src/spatial_memory/mujoco_perception.py">MuJoCo ray sensor</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/scripts/evaluate_phase2_61ray_emergency_safety_full_288.py">frozen Phase 2 evaluation</a>.</p>
+<p>I prepared and reused <strong>36 saved development environments</strong>, with 12 from each of three floor-plan families: <strong>R (Room Graph)</strong>, containing rooms connected by narrow doors; <strong>BP (B-prime Rectangular Partition)</strong>, containing rectangular rooms connected by selected doorways; and <strong>M (Maze)</strong>, containing narrow, winding corridors. All layouts are based on saved 25 × 25 grids, not newly generated scenes for these comparisons.</p>
+<div class="maze-overview">
+<h3>The 36 development environments</h3>
+<p>The following diagrams show the actual saved wall layouts from above. <strong>Cyan marks each start position</strong>, and <strong>gold marks the goal</strong>. Select a diagram to view its full-size version. On narrow screens, swipe horizontally to examine individual layouts.</p>
+<div class="maze-gallery">
+<figure>
+<a class="maze-sheet" href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_R.png" target="_blank" rel="noopener" aria-label="Open full-resolution overview of all 12 Room Graph environments"><img src="https://raw.githubusercontent.com/fujitamasahir/humanoid-spatial-memory/c24867026c878e511bd3ad8934c55412ea4bb236/results/phase2_mujoco/phase15_maze_top_views_36/overview_R.png" alt="Top-down diagrams of 12 saved Room Graph environments, showing maze walls, cyan start positions and gold goal positions." loading="lazy" decoding="async"></a>
+<figcaption><strong>R: Room Graph.</strong> Twelve saved environments with rooms connected by narrow doors. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_R.png" target="_blank" rel="noopener">View full-size image</a>.</figcaption>
+</figure>
+<figure>
+<a class="maze-sheet" href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_BP.png" target="_blank" rel="noopener" aria-label="Open full-resolution overview of all 12 B-prime Rectangular Partition environments"><img src="https://raw.githubusercontent.com/fujitamasahir/humanoid-spatial-memory/c24867026c878e511bd3ad8934c55412ea4bb236/results/phase2_mujoco/phase15_maze_top_views_36/overview_BP.png" alt="Top-down diagrams of 12 saved B-prime Rectangular Partition environments, showing maze walls, cyan start positions and gold goal positions." loading="lazy" decoding="async"></a>
+<figcaption><strong>BP: B-prime Rectangular Partition.</strong> Twelve saved environments with rectangular rooms and selected connecting doorways. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_BP.png" target="_blank" rel="noopener">View full-size image</a>.</figcaption>
+</figure>
+<figure>
+<a class="maze-sheet" href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_M.png" target="_blank" rel="noopener" aria-label="Open full-resolution overview of all 12 Maze environments"><img src="https://raw.githubusercontent.com/fujitamasahir/humanoid-spatial-memory/c24867026c878e511bd3ad8934c55412ea4bb236/results/phase2_mujoco/phase15_maze_top_views_36/overview_M.png" alt="Top-down diagrams of 12 saved Maze environments, showing maze walls, cyan start positions and gold goal positions." loading="lazy" decoding="async"></a>
+<figcaption><strong>M: Maze.</strong> Twelve saved environments with narrow, winding corridors. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_M.png" target="_blank" rel="noopener">View full-size image</a>.</figcaption>
+</figure>
+</div>
+<p class="small">The diagrams show fixed maze geometry and start/goal locations. Moving pedestrian trajectories and the two schedules of obstacle changes are not shown. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_all_36.png" target="_blank" rel="noopener">See all 36 mazes in one image</a> or <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/metadata.json">view their saved identities and coordinates</a>.</p>
+</div>
+<p>Each world had <strong>two saved obstacle-change schedules</strong>. Every observation policy ran on the same 72 world–schedule pairs, resulting in <strong>36 × 2 × 4 = 288 episodes</strong> for each planner variant. Runs used random seed 42, an 80-step limit, at most 20 observations per episode, and an assumed scale of 0.75 m per cell. The 36 development or fit worlds are not independent held-out test environments, and two schedules from one world are not independent samples.</p>
+<p>The simulated G1 moves and rotates kinematically. Its actual MuJoCo collision geometry checks only the action selected by the planner. Rejected actions are recorded separately from observation memory; no hidden world map or collision tests of unselected actions are provided to the planner.</p>
+</section>
+<hr>
+<section aria-labelledby="results-heading">
+<p class="section-no">04 / Results</p>
+<h2 id="results-heading">Recovering navigation by correcting turn clearance</h2>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-planner-revisions.svg" alt="Goal completions across 288 matched episodes: 214 with the earlier flexible movement planner, 21 with conservative forward-first turns, and 225 with the revised forward-first planner using actual MuJoCo collision checks for selected turns." width="920" height="362" loading="lazy">
+<figcaption>Three successive planner configurations evaluated on the same 36 development worlds, schedules, observation policies and episode limits. Different movement rules mean that the historical flexible-movement results are not a controlled comparison of observation policies under the final planner.</figcaption>
+</figure>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Planner revision comparison across 288 episodes per configuration</caption>
+<thead><tr><th scope="col">Planner configuration</th><th scope="col">Goals</th><th scope="col">Contact-free goals</th><th scope="col">Goal rate</th></tr></thead>
+<tbody>
+<tr><td>Earlier planner (lateral/backward moves permitted)</td><td>214/288</td><td>213/288</td><td>74.3%</td></tr>
+<tr><td>Initial forward-first (rectangle-based turn rejection)</td><td>21/288</td><td>21/288</td><td>7.3%</td></tr>
+<tr class="highlight"><td>Revised forward-first (selected-turn MuJoCo check)</td><td><strong>225/288</strong></td><td><strong>224/288</strong></td><td><strong>78.1%</strong></td></tr>
+</tbody></table>
+</div>
+<h3>Adding lateral avoidance and a separate emergency safety layer</h3>
+<p>The selected-turn fix recovered goal completion but did not eliminate moving-obstacle contact. A constrained lateral escape, triggered by measured nearby proxy risk and observed-clear swept space, preserved <strong>225/288 goal completions</strong> while improving contact-free completions from <strong>224 to 225</strong>. It prevented one of two contact episodes; one Static-policy collision remained. These are results of the matched 288-episode lateral-avoidance comparison, not a claim that sideways motion was enabled everywhere.</p>
+<p>I then added a <strong>separate short-range emergency scanner</strong>, independent of the spatial-memory observation scheduler. In a targeted Static-policy episode, the sensor detected risk ahead at step 52, initiated waiting and a lateral escape, and reached the goal at step 76 without unwanted contact. The first validated 181-ray scanner was optimized from a 6.127 ms to a 0.483 ms median scan time (12.7× faster) in a five-pair benchmark of this one episode. The subsequent <strong>61-ray, 360°, 2 m</strong> configuration was evaluated across all <strong>288 matched 80-step episodes</strong>, rather than being assumed safe from the single case.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Matched 80-step benchmarks and independent emergency sensing</caption>
+<thead><tr><th scope="col">Configuration</th><th scope="col">Goal completions</th><th scope="col">Contact-free goals</th><th scope="col">Episodes with unwanted contacts</th></tr></thead>
+<tbody>
+<tr><td>Revised forward-first, before lateral avoidance</td><td>225/288</td><td>224/288</td><td>2</td></tr>
+<tr><td>After constrained lateral avoidance</td><td>225/288</td><td>225/288</td><td>1</td></tr>
+<tr class="highlight"><td>With independent 61-ray emergency sensing</td><td><strong>225/288</strong></td><td><strong>225/288</strong></td><td><strong>0</strong></td></tr>
+</tbody></table>
+</div>
+<p>The full 61-ray safety evaluation eliminated the remaining <strong>234 unwanted proxy geometry contact pairs across six contact states</strong>. The overall goal count stayed at 225 because the Static R <code>80000001</code> / schedule 1 run became successful, while the Periodic M <code>80030007</code> / schedule 1 run no longer reached its goal within 80 steps after safety waits. The emergency scanner ran every simulated step without updating spatial memory, requiring <strong>13,731 scans (837,591 raycasts)</strong>. Thus fewer contacts did not imply a higher goal count or zero sensing cost.</p>
+<p class="small"><a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_full_288_v1/phase2_final_report.md">Full 288-episode safety evaluation</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_full_288_v1/failure_analysis.md">Goal tradeoff and failure analysis</a></p>
+<h3>Revised forward-first results by observation policy</h3>
+<p>The four policies differ in when they refresh their observed map. The corrected forward-first planner and the same safety checks are used for every policy.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Revised forward-first navigation, 72 episodes per observation policy</caption>
+<thead><tr><th scope="col">Observation policy</th><th scope="col">Goals</th><th scope="col">Contact-free goals</th><th scope="col">Mean observations</th></tr></thead>
+<tbody>
+<tr><td>Static</td><td>36/72 (50.0%)</td><td>36/72</td><td>1.00</td></tr>
+<tr class="highlight"><td>Periodic</td><td><strong>67/72 (93.1%)</strong></td><td>66/72</td><td>11.11</td></tr>
+<tr><td>Age</td><td>66/72 (91.7%)</td><td>66/72</td><td>11.79</td></tr>
+<tr><td>Uncertainty</td><td>56/72 (77.8%)</td><td>56/72</td><td>8.28</td></tr>
+</tbody></table>
+</div>
+<h3>Revised forward-first results by maze family</h3>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Revised forward-first goal completion by saved maze family</caption>
+<thead><tr><th scope="col">Family</th><th scope="col">Initial forward-first</th><th scope="col">Revised forward-first</th><th scope="col">Contact-free revised</th></tr></thead>
+<tbody>
+<tr><td>R: Room Graph</td><td>0/96</td><td>74/96</td><td>74/96</td></tr>
+<tr><td>BP: Rectangular Partition</td><td>21/96</td><td>88/96</td><td>88/96</td></tr>
+<tr><td>M: Maze</td><td>0/96</td><td>63/96</td><td>62/96</td></tr>
+</tbody></table>
+</div>
+<p>The revised planner selected <strong>3,964 turn actions</strong>; the actual MuJoCo collision shield rejected <strong>three</strong> of them, with <strong>zero collision queries for unselected actions</strong>. Two episodes recorded unwanted contacts with moving capsule-shaped pedestrian proxies; one nevertheless reached the goal and is excluded from contact-free completion. These remain simulation results on saved development environments, with no claim of physical walking or real-world safety.</p>
+<div class="takeaway">The dominant improvement came from correcting an overly conservative geometric <em>turn prefilter</em>, not from making the robot's body smaller or weakening the chosen-action collision checks. The robot still primarily moves forward, and obstacle-avoidance exceptions remain restricted.</div>
+<h3>Earlier observation-scheduling baseline</h3>
+<p>Before introducing forward-first behavior, I compared the observation strategies using a more permissive kinematic planner that allowed lateral and backward translation. The results below are preserved for transparency, but they should not be conflated with the revised forward-first experiment.</p>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-policy-results.svg" alt="Earlier flexible-movement baseline goal completions per 72 episodes: Static 32, Periodic 67, Age 57, and Uncertainty 58." width="960" height="495" loading="lazy">
+<figcaption>Historical flexible-movement baseline. Periodic reached 67/72 goals while Uncertainty used fewer observations. This chart does not show the final forward-first planner.</figcaption>
+</figure>
+<p class="small">For the historical baseline, paired world-clustered bootstrap estimates gave a Periodic minus Uncertainty goal-completion difference of +12.5 percentage points (95% confidence interval: +2.8 to +23.6 points). This estimate does not describe the revised forward-first run.</p>
+</section>
+<hr>
+<section aria-labelledby="failure-heading">
+<p class="section-no">05 / Failure Analysis</p>
+<h2 id="failure-heading">Why did forward-first navigation initially fail?</h2>
+<p>Changing the default movement policy to forward travel with explicit in-place turns first reduced goal completion to only <strong>21/288</strong>. All 96 Room Graph episodes and all 96 Maze episodes stopped without a successful move or turn. Initially, this looked like a problem with narrow corridors.</p>
+<p>I investigated all 36 saved starting locations. Using the actual G1 MuJoCo collision geometry, the robot could turn 90 degrees in either direction at <strong>all 36 starts</strong>, including with each scene's initially saved obstacles and pedestrians. However, the A* planner's <strong>axis-aligned bounding-box (AABB) approximation</strong> incorrectly rejected both turns at <strong>12/12 R starts, 12/12 M starts, and 7/12 BP starts</strong>. A rectangle around the robot's rotated footprint can overlap a nearby wall cell even when the actual robot clears it.</p>
+<p>Instead of querying every possible turn against hidden simulator geometry, I removed the AABB <em>pre-rejection of turns only</em>. The planner now proposes a turn from its observed-map state, and the actual MuJoCo model checks <strong>only the selected turn</strong>. If that turn fails, attempted-action feedback prevents repeated selection until relevant local evidence changes. Translation clearance still uses the original footprint approximation. This preserves the separation between what the robot knows and what the simulator knows.</p>
+<p>A diagnostic allowed one initial backward step in selected cases, but that was not the main fix. Under a full-map diagnostic assumption, only two Room Graph mazes gained a feasible route after backing up. The large recovery to <strong>225/288</strong> came from changing turn-clearance handling while keeping forward-first navigation.</p>
+<p>The improvement does not remove all failure modes. Two revised-run episodes recorded unwanted contact with moving capsule-shaped pedestrian proxies. These are geometric stand-ins for people, not articulated or reactive human models. Incomplete observations, changing obstacles, grid discretization, and the 80-step horizon still constrain performance. The original planner's 214/288 result used different movement permissions, so it is retained as a historical comparison rather than evidence that one observation policy is universally best.</p>
+<h3>Failure replay: contact with a moving capsule proxy</h3>
+<p>This saved example comes from the <strong>Maze environment M:80030007</strong>, obstacle schedule 1, using the <strong>Periodic</strong> observation policy. G1 reached the goal in 76 simulation steps, but the evaluator recorded unwanted contact with the moving proxy. This is a failure of <em>contact-free navigation</em>, even though the navigation goal was reached.</p>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-proxy-contact-M80030007-before-lateral-fix.gif" alt="MuJoCo replay of a Unitree G1 in a maze making contact with a semitransparent reddish capsule-shaped moving obstacle proxy. The capsule is a geometric substitute for a pedestrian, not an animated human model." width="1280" height="720" loading="lazy" decoding="async">
+<figcaption>Deterministic replay of the recorded contact episode. The moving obstacle is a simple MuJoCo capsule, <strong>0.19 m in radius and 1.46 m in total height</strong> (1.08 m centerline), not a person or humanoid character. The translucent appearance is for presentation only. G1's arm and leg animation is also visual-only, while navigation uses kinematic root movement.</figcaption>
+</figure>
+<p class="small">The source run recorded 234 unwanted capsule-proxy contact pairs across its trajectory; this count is not 234 distinct collisions. Since the full 288-episode run did not save per-frame poses, this video was reconstructed by deterministic replay and checked against the saved episode's action events and outcome metrics. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_pedestrian_capsule_replay_M80030007_periodic_s1_v6/replay_validation.json">Replay validation</a> and <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_pedestrian_capsule_replay_M80030007_periodic_s1_v6/portfolio_export/presentation_note.md">visualization notes</a> document the reproduction. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_pedestrian_capsule_replay_M80030007_periodic_s1_v6/portfolio_export/portfolio_demo.gif">Open the full GIF</a> (approximately 63 MB).</p>
+<h3>Lateral avoidance: before and after</h3>
+<p>To address an observed proxy-contact failure, I added a conservative lateral sidestep option that uses observed free space when a moving capsule proxy poses an imminent risk. In the <strong>M:80030007 / schedule 1 / Periodic</strong> case, this intervention avoided the previously recorded contact without changing the episode's goal-completion outcome. In the matched 288-episode comparison, goal completions remained <strong>225/288</strong>, while contact-free goal completions improved from <strong>224/288 to 225/288</strong>. Episodes with unwanted proxy contact decreased from <strong>2 to 1</strong>, and the summed proxy contact-pair count decreased from <strong>468 to 234</strong>. Contact pairs are simulator geometry contacts, not distinct collisions.</p>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-proxy-contact-M80030007-comparison-lateral-fix.gif" alt="Side-by-side MuJoCo comparison of the same moving capsule-proxy scenario before and after the lateral avoidance change." width="1600" height="450" loading="lazy" decoding="async">
+<figcaption>Side-by-side replay: before (left) and after (right) the observed-clear lateral avoidance fix. The moving obstacle is a non-reactive geometric capsule, not an animated human.</figcaption>
+</figure>
+<h3>Independent emergency safety sensing</h3>
+<p>The remaining recorded proxy-contact case was <strong>R:80000001 / schedule 1 / Static / seed 42</strong>. Because the Static spatial-memory policy observes only at step 0, it could not refresh its map when a proxy approached later. I introduced an <strong>independent, continuous emergency safety sensor</strong>: 181 MuJoCo rays over 360° with a 2 m range at each simulation step. These short-range readings support immediate safety decisions but <strong>do not update the Static spatial memory</strong>; its observation count remains one.</p>
+<p>In this single evaluated episode, the sensor detected the proxy at <strong>(11,5)</strong> from G1's position <strong>(10,4)</strong> at step 52, before a hazardous move into <strong>(11,4)</strong>. G1 waited, then sidestepped to <strong>(10,5)</strong> at step 54, and reached the goal at <strong>step 76</strong> with <strong>zero unwanted proxy-contact states or contact pairs</strong>. The saved baseline did not reach the goal and recorded six contact states and 234 contact pairs. The collision shield still checks only the selected action, and the controller does not access future proxy trajectories.</p>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1-proxy-contact-R80000001-comparison-safety-sensor.gif" alt="Side-by-side MuJoCo replay of the R80000001 Static episode without and with independent emergency safety sensing. The moving obstacle is a geometric capsule proxy." width="1600" height="450" loading="lazy" decoding="async">
+<figcaption>R:80000001 / schedule 1 / Static: before (left) and after (right) independent emergency safety sensing. The sensor-enabled run waits before entering a threatened cell, makes a lateral escape, and reaches the goal without unwanted capsule-proxy contact in this recorded episode.</figcaption>
+</figure>
+<h3>Safety sensor optimization and computational cost</h3>
+<p>The initial safety implementation added significant computation: an earlier five-pair benchmark measured a median episode time of <strong>177.6 ms without</strong> versus <strong>718.1 ms with</strong> the sensor, with a median scan time of <strong>6.26 ms</strong>. Profiling subsequently identified roughly <strong>35,000 Python-loop grid conversions per scan</strong> as the dominant bottleneck. I replaced individual MuJoCo ray intersection calls with batched <code>mj_multiRay</code> and vectorized the sampled-point grid conversion, preserving 181 rays, 360° coverage, 2 m range, and 0.075 m sampling.</p>
+<p>In a new five-pair optimization benchmark of this same episode, median scan time fell from <strong>6.127 to 0.483 ms (92.1% reduction; 12.7× faster)</strong>, and median total episode time fell from <strong>665.2 to 236.3 ms (64.5% reduction)</strong>. The optimized 181-ray version reproduced the saved safety trajectory, observations, and interventions: goal at step 76, zero unwanted proxy contacts, and one Static memory observation. The optimized episode still took longer than the <strong>160.7 ms</strong> no-sensor benchmark in this new measurement set; the safety sensing is not computationally free.</p>
+<p>Experimental <strong>91-ray</strong> and <strong>61-ray</strong> configurations reduced median scan time further to <strong>0.317 ms</strong> and <strong>0.267 ms</strong>, respectively, and both completed this same episode without contact. They are not the default because one successful scenario cannot establish that sparser angular sampling reliably detects unseen or occluded moving proxies. The validated <strong>181-ray optimized sensor remains the default</strong>; adaptive sensing was not enabled. These measurements are from a single development episode, not evidence of safety across other environments or of real-world robot performance. The condition is <em>Static Spatial Memory + Continuous Safety Sensing</em>, not pure Static.</p>
+<p class="small"><a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/docs/phase2_independent_emergency_safety.md">Emergency safety sensor design and reproduction</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_static_independent_safety_R80000001_s1_v5/episode_comparison.json">Single-episode comparison</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_emergency_safety_optimization_R80000001_s1_v1/optimization_report.md">Optimization report</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_emergency_safety_optimization_R80000001_s1_v1/benchmark_comparison.json">Optimization benchmark</a></p>
+</section>
+<hr>
+<section aria-labelledby="horizon-heading">
+<p class="section-no">06 / Extended-Horizon Evaluation</p>
+<h2 id="horizon-heading">Was the 80-step limit masking successful navigation?</h2>
+<p>Even after adding the independent emergency sensor, <strong>63 of 288 episodes had not reached the goal at the original 80-step cutoff</strong>. I reran <em>only these 63 previously unsuccessful episodes</em> with the same saved worlds, schedules, policies, seed, safety system, and observation budget, changing only the maximum episode length from 80 to 400 steps. The recorded trajectory prefixes through <strong>steps 0–80 matched in all 63 cases</strong>, confirming that the extensions did not alter the initial behavior. Previously successful episodes were not rerun.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Extending only the initially unsuccessful episodes</caption>
+<thead><tr><th scope="col">Follow-up horizon</th><th scope="col">Episodes evaluated</th><th scope="col">New goals reached</th><th scope="col">Still unsuccessful</th><th scope="col">Unwanted-contact episodes</th></tr></thead>
+<tbody>
+<tr><td>80 → 400 steps</td><td>63</td><td><strong>60/63</strong></td><td>3</td><td>0</td></tr>
+<tr><td>400 → 800 steps</td><td>3</td><td><strong>1/3</strong></td><td>2</td><td>0</td></tr>
+</tbody></table>
+</div>
+<p>The <strong>60 contact-free completions</strong> at the 400-step horizon reached their goals between <strong>steps 82 and 379</strong>, at a mean of <strong>151.73 steps</strong>. All three remaining 400-step failures used <strong>Static spatial memory</strong>. Of the original 288 matched episodes, 225 had reached the goal by step 80; combining those archived successes with the extended runs gives <strong>285/288 by step 400</strong> and <strong>286/288 by step 800</strong>. These are cumulative outcomes from targeted continuations, not new full 288-episode runs at the longer horizons.</p>
+<p class="small"><a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_failed_episodes_h400_v1/report.md">400-step extension report</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_failed_episodes_h400_v1/experiment_manifest.json">Trace-prefix verification</a></p>
+<h3>What happened when the last three episodes were given 800 steps?</h3>
+<p>The final three Static-policy episodes were extended to 800 steps, with their recorded prefixes through step 400 preserved. The maze <strong>M <code>80030008</code>, schedule 1, Static</strong> reached its goal at <strong>step 479</strong>, with no unwanted contact. However, the two rectangular-partition runs <strong>BP <code>80010004</code>, schedule 0 and schedule 1, Static</strong> still did not reach the goal by step 800; both ended at grid position <strong>(1, 23)</strong>, with zero unwanted contact states or pairs.</p>
+<p>Detailed replay diagnostics show that the BP runs <em>did move and revisit locations</em> before stopping—they were not stationary from the beginning. With schedule 0, G1 reached a constant final pose from <strong>step 460 through 800</strong>; with schedule 1, it remained at its final pose from <strong>step 440 through 800</strong>. In both runs, the planner reported <code>no_feasible_forward_route</code> throughout the stationary suffix. The replays did not identify a short exact repeated position-and-heading cycle before this terminal condition. In other words, simply increasing the deadline could not resolve the route-selection limitation of these Static-policy episodes.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Three residual Static episodes at the 800-step horizon</caption>
+<thead><tr><th scope="col">Saved world and schedule</th><th scope="col">800-step outcome</th><th scope="col">Key diagnostic</th></tr></thead>
+<tbody>
+<tr><td>BP <code>80010004</code> · schedule 0 · Static</td><td>Not reached</td><td>No feasible forward route from step 460</td></tr>
+<tr><td>BP <code>80010004</code> · schedule 1 · Static</td><td>Not reached</td><td>No feasible forward route from step 440</td></tr>
+<tr><td>M <code>80030008</code> · schedule 1 · Static</td><td>Reached at step 479</td><td>Contact-free goal</td></tr>
+</tbody></table>
+</div>
+<div class="maze-gallery extended-replay-gallery">
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1_no_feasible_forward_route-0.gif" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/fujitamasahir/humanoid-spatial-memory/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_horizon800_residual_replays_v1/case_A/split_screen_export/g1_split_screen_8x.gif'" alt="Eight-times-speed split-screen MuJoCo replay of G1 in saved BP 80010004, schedule 0, Static. The planner reports no feasible forward route from step 460 until step 800." loading="lazy" decoding="async">
+<figcaption><strong>BP 80010004 · schedule 0 · Static.</strong> G1 explores the maze and eventually stops at (1, 23). From step 460 through step 800, the planner returns <code>no_feasible_forward_route</code>. No unwanted contacts were recorded.</figcaption>
+</figure>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1_no_feasible_forward_route-1.gif" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/fujitamasahir/humanoid-spatial-memory/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_horizon800_residual_replays_v1/case_B/split_screen_export/g1_split_screen_8x.gif'" alt="Eight-times-speed split-screen MuJoCo replay of G1 in saved BP 80010004, schedule 1, Static. The planner reports no feasible forward route from step 440 until step 800." loading="lazy" decoding="async">
+<figcaption><strong>BP 80010004 · schedule 1 · Static.</strong> The same saved world with a different obstacle schedule stops at (1, 23). The stationary suffix begins at step 440 and continues through step 800, without unwanted contact.</figcaption>
+</figure>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1_step479.gif" onerror="this.onerror=null;this.src='https://raw.githubusercontent.com/fujitamasahir/humanoid-spatial-memory/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_horizon800_residual_replays_v1/case_C/split_screen_export/g1_split_screen_8x.gif'" alt="Eight-times-speed split-screen MuJoCo replay of G1 reaching the goal at step 479 in saved M 80030008, schedule 1, Static, without unwanted contact." loading="lazy" decoding="async">
+<figcaption><strong>M 80030008 · schedule 1 · Static.</strong> A longer horizon is sufficient here: G1 reaches the goal at step 479 without unwanted contact.</figcaption>
+</figure>
+</div>
+<p class="small">The GIFs are presentation-speed replays of saved simulation records; animated limb motion is visual only. The right-hand maps visualize saved evaluator geometry and pose, not the robot's observed occupancy memory. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_unreached_h400_h800_v1/report.md">800-step follow-up report</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/tree/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_horizon800_residual_replays_v1">Replay diagnostics and trajectory data</a></p>
+<div class="takeaway">A longer action budget resolved most deadline-limited episodes, but <strong>two Static-memory runs remained unable to find a feasible forward route</strong>. The remaining failures point to navigation and memory limitations rather than unwanted collisions in these saved tests.</div>
+</section>
+<hr>
+<section aria-labelledby="limitations-heading">
+<p class="section-no">07 / Limitations &amp; Next Steps</p>
+<h2 id="limitations-heading">Toward more realistic humanoid navigation</h2>
+<ul>
+<li><strong>No physical walking:</strong> G1 uses kinematic waypoint translation and turning. Joint-level gait, balance, falls, and safe foot placement are not simulated.</li>
+<li><strong>2D memory from 3D rays:</strong> The sensor uses one horizontal ray plane. There is no depth-camera noise, vertical scan, or 3D voxel memory.</li>
+<li><strong>Simplified human stand-ins:</strong> Moving pedestrians are represented by non-reactive capsule-shaped geometric proxies, not articulated human models.</li>
+<li><strong>Development-only comparison:</strong> All 36 saved fit worlds and a single random seed were used across successive planner revisions. Results should be tested on unseen layouts and additional random seeds.</li>
+<li><strong>Long-horizon Static failures:</strong> Extending the episode deadline did not resolve two BP <code>80010004</code> runs; both eventually returned <code>no_feasible_forward_route</code> without reaching the goal. Future work should investigate replanning, stale memory, and route-feasibility feedback separately.</li>
+<li><strong>Uncalibrated scale:</strong> The 0.75 m/cell grid remains an explicit modeling assumption.</li>
+</ul>
+<p>Next steps are to diagnose persistent no-route failures, evaluate independent emergency sensing and horizon extensions on unseen layouts and additional seeds, introduce articulated human models, and eventually integrate physically actuated G1 walking. The work currently evaluates simulated spatial memory and navigation, not deployable humanoid locomotion or real-world safety.</p>
+</section>
+<hr>
+<section aria-labelledby="repro-heading">
+<h2 id="repro-heading">Code, data &amp; reproducibility</h2>
+<p>Source code, saved maze maps, per-episode records, movement-policy comparisons, emergency-sensing evaluations, 400/800-step continuations, turn-clearance diagnostics, and provenance hashes are available in the research repository. Each planner revision keeps its own 288-episode result directory; earlier raw results were not replaced.</p>
+<p class="sources">
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/tree/phase2/mujoco-proxy-pilot">Source code</a> ·
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_all_36.png">All 36 maze diagrams</a> ·
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/docs/phase2_turn_clearance_revision.md">Turn-clearance design note</a> ·
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/start_turn_clearance_diagnostic_36_v2.csv">36-start diagnostic (CSV)</a> ·
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_shield_turns_v1_full_288/turn_clearance_comparison.json">Planner comparison (JSON)</a> ·
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_shield_turns_v1_full_288/episodes.csv">Revised 288-episode records (CSV)</a> ·
+<a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_shield_turns_v1_full_288/per_maze_comparison.csv">Per-maze results (CSV)</a>
+</p>
+<p class="small">Original flexible-movement comparison: <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_3d_perception_footprint_feedback_full_288/paired_world_clustered_analysis.json">paired analysis</a>. Initial forward-first comparison: <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_default_full_288/summary.json">summary</a>. All use saved development/fit worlds, not held-out test sets. The Unitree G1 model comes from MuJoCo Menagerie under its separate upstream license.</p>
+</section>
+<hr><footer><a href="../index.html#projects">← Back to projects</a><p>© 2026 Masahiro Fujita</p></footer>
+</main></body>
+</html>
