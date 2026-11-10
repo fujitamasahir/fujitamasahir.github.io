@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Spatial memory for Unitree G1 navigation in MuJoCo: 36 saved maze layouts, four observation strategies, and a forward-first planner revised from 21 to 225 goal completions in 288 episodes.">
+<meta name="description" content="Spatial memory for simulated Unitree G1 navigation: 288 matched 80-step episodes, 61-ray emergency sensing, 60 of 63 failed runs recovered by step 400, and one more by step 800.">
 <title>Humanoid Spatial Memory | Masahiro Fujita</title>
 <style>
 *{box-sizing:border-box}
@@ -59,8 +59,8 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <hr>
 <section class="abstract" aria-labelledby="abstract-heading">
 <h2 id="abstract-heading">Abstract</h2>
-<p>How should a humanoid robot update its spatial memory and navigate safely when indoor obstacles change? I built a MuJoCo testbed with a <strong>Unitree G1 model</strong>, three-dimensional (3D) ray perception, a two-dimensional (2D) occupancy memory, A* route planning, and collision-checked motion. I prepared <strong>36 saved indoor environments</strong> and compared four observation policies (Static, Periodic, Age, and Uncertainty) over 288 matched episodes per planner configuration. When I changed the robot to walk primarily forward, an overly conservative rectangular collision approximation made the planner reject feasible turns: goal completion fell to <strong>21/288 (7.3%)</strong>. After replacing that turn prefilter with MuJoCo collision checks on <em>selected</em> turns only, completion recovered to <strong>225/288 (78.1%)</strong>, including <strong>224 contact-free completions</strong>. The revision exposed how geometric modeling assumptions can limit navigation more than the robot's actual body. These are <strong>kinematic simulation</strong> results, not physically actuated bipedal walking.</p>
-<p class="facts">36 development environments (12 room-graph layouts, 12 rectangular-partition layouts, 12 maze layouts) · Two schedules per world · Four policies · Fixed random seed 42 · 80-step limit · Maximum 20 observations including initialization · Assumed 0.75 m/grid cell</p>
+<p>How should a humanoid robot update spatial memory and navigate around changing indoor obstacles without unnecessary contact? I developed a <strong>Unitree G1 MuJoCo</strong> simulation with 3D ray sensing, 2D occupancy memory, four observation policies (Static, Periodic, Age, and Uncertainty), A* planning, and selected-action collision checks. In 288 matched 80-step episodes on 36 saved development environments, an initially overconservative turn-clearance approximation reduced goal completion to <strong>21/288 (7.3%)</strong>; correcting the selected-turn logic recovered <strong>225/288 (78.1%)</strong>. After conservative lateral avoidance and independent <strong>61-ray emergency sensing</strong>, the 288-episode evaluation retained <strong>225 goal completions with zero unwanted contacts</strong>. To separate time-limit failures from persistent route failures, I replayed the 63 initially unsuccessful episodes with a 400-step horizon: <strong>60/63 reached the goal contact-free</strong> (mean goal step 151.73). Raising the limit to 800 rescued one of the remaining three at step 479, while two Static-policy episodes still failed when the planner reported no feasible forward route. These are development-set results using <strong>kinematic root navigation</strong> and non-reactive capsule pedestrian proxies, not demonstrated physical bipedal walking or real-world safety.</p>
+<p class="facts">36 saved development environments (12 each of Room Graph, Rectangular Partition, and Maze) · Two schedules per world · Four observation policies · Seed 42 · Initial 80-step benchmark, followed by 400- and 800-step continuations of unsuccessful episodes · Maximum 20 spatial-memory observations · Assumed 0.75 m/grid cell</p>
 </section>
 <figure>
 <img class="figure-image" src="../assets/spatial-memory/g1-split_screen.gif" alt="Synchronized two-panel animation of a simulated Unitree G1 moving through an indoor MuJoCo maze on the left and its route, current position, start, and goal on an overhead map on the right." width="1920" height="720" decoding="async">
@@ -137,6 +137,21 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <tr class="highlight"><td>Revised forward-first (selected-turn MuJoCo check)</td><td><strong>225/288</strong></td><td><strong>224/288</strong></td><td><strong>78.1%</strong></td></tr>
 </tbody></table>
 </div>
+<h3>Adding lateral avoidance and a separate emergency safety layer</h3>
+<p>The selected-turn fix recovered goal completion but did not eliminate moving-obstacle contact. A constrained lateral escape, triggered by measured nearby proxy risk and observed-clear swept space, preserved <strong>225/288 goal completions</strong> while improving contact-free completions from <strong>224 to 225</strong>. It prevented one of two contact episodes; one Static-policy collision remained. These are results of the matched 288-episode lateral-avoidance comparison, not a claim that sideways motion was enabled everywhere.</p>
+<p>I then added a <strong>separate short-range emergency scanner</strong>, independent of the spatial-memory observation scheduler. In a targeted Static-policy episode, the sensor detected risk ahead at step 52, initiated waiting and a lateral escape, and reached the goal at step 76 without unwanted contact. The first validated 181-ray scanner was optimized from a 6.127 ms to a 0.483 ms median scan time (12.7× faster) in a five-pair benchmark of this one episode. The subsequent <strong>61-ray, 360°, 2 m</strong> configuration was evaluated across all <strong>288 matched 80-step episodes</strong>, rather than being assumed safe from the single case.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Matched 80-step benchmarks and independent emergency sensing</caption>
+<thead><tr><th scope="col">Configuration</th><th scope="col">Goal completions</th><th scope="col">Contact-free goals</th><th scope="col">Episodes with unwanted contacts</th></tr></thead>
+<tbody>
+<tr><td>Revised forward-first, before lateral avoidance</td><td>225/288</td><td>224/288</td><td>2</td></tr>
+<tr><td>After constrained lateral avoidance</td><td>225/288</td><td>225/288</td><td>1</td></tr>
+<tr class="highlight"><td>With independent 61-ray emergency sensing</td><td><strong>225/288</strong></td><td><strong>225/288</strong></td><td><strong>0</strong></td></tr>
+</tbody></table>
+</div>
+<p>The full 61-ray safety evaluation eliminated the remaining <strong>234 unwanted proxy geometry contact pairs across six contact states</strong>. The overall goal count stayed at 225 because the Static R <code>80000001</code> / schedule 1 run became successful, while the Periodic M <code>80030007</code> / schedule 1 run no longer reached its goal within 80 steps after safety waits. The emergency scanner ran every simulated step without updating spatial memory, requiring <strong>13,731 scans (837,591 raycasts)</strong>. Thus fewer contacts did not imply a higher goal count or zero sensing cost.</p>
+<p class="small"><a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_full_288_v1/phase2_final_report.md">Full 288-episode safety evaluation</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_full_288_v1/failure_analysis.md">Goal tradeoff and failure analysis</a></p>
 <h3>Revised forward-first results by observation policy</h3>
 <p>The four policies differ in when they refresh their observed map. The corrected forward-first planner and the same safety checks are used for every policy.</p>
 <div class="table-scroll">
@@ -207,22 +222,69 @@ footer{text-align:center;font-size:12px;color:#888;padding:5px 0 15px}
 <p class="small"><a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/docs/phase2_independent_emergency_safety.md">Emergency safety sensor design and reproduction</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_static_independent_safety_R80000001_s1_v5/episode_comparison.json">Single-episode comparison</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_emergency_safety_optimization_R80000001_s1_v1/optimization_report.md">Optimization report</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_emergency_safety_optimization_R80000001_s1_v1/benchmark_comparison.json">Optimization benchmark</a></p>
 </section>
 <hr>
+<section aria-labelledby="horizon-heading">
+<p class="section-no">06 / Extended-Horizon Evaluation</p>
+<h2 id="horizon-heading">Was the 80-step limit masking successful navigation?</h2>
+<p>Even after adding the independent emergency sensor, <strong>63 of 288 episodes had not reached the goal at the original 80-step cutoff</strong>. I reran <em>only these 63 previously unsuccessful episodes</em> with the same saved worlds, schedules, policies, seed, safety system, and observation budget, changing only the maximum episode length from 80 to 400 steps. The recorded trajectory prefixes through <strong>steps 0–80 matched in all 63 cases</strong>, confirming that the extensions did not alter the initial behavior. Previously successful episodes were not rerun.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Extending only the initially unsuccessful episodes</caption>
+<thead><tr><th scope="col">Follow-up horizon</th><th scope="col">Episodes evaluated</th><th scope="col">New goals reached</th><th scope="col">Still unsuccessful</th><th scope="col">Unwanted-contact episodes</th></tr></thead>
+<tbody>
+<tr><td>80 → 400 steps</td><td>63</td><td><strong>60/63</strong></td><td>3</td><td>0</td></tr>
+<tr><td>400 → 800 steps</td><td>3</td><td><strong>1/3</strong></td><td>2</td><td>0</td></tr>
+</tbody></table>
+</div>
+<p>The <strong>60 contact-free completions</strong> at the 400-step horizon reached their goals between <strong>steps 82 and 379</strong>, at a mean of <strong>151.73 steps</strong>. All three remaining 400-step failures used <strong>Static spatial memory</strong>. Of the original 288 matched episodes, 225 had reached the goal by step 80; combining those archived successes with the extended runs gives <strong>285/288 by step 400</strong> and <strong>286/288 by step 800</strong>. These are cumulative outcomes from targeted continuations, not new full 288-episode runs at the longer horizons.</p>
+<p class="small"><a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_failed_episodes_h400_v1/report.md">400-step extension report</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_failed_episodes_h400_v1/experiment_manifest.json">Trace-prefix verification</a></p>
+<h3>What happened when the last three episodes were given 800 steps?</h3>
+<p>The final three Static-policy episodes were extended to 800 steps, with their recorded prefixes through step 400 preserved. The maze <strong>M <code>80030008</code>, schedule 1, Static</strong> reached its goal at <strong>step 479</strong>, with no unwanted contact. However, the two rectangular-partition runs <strong>BP <code>80010004</code>, schedule 0 and schedule 1, Static</strong> still did not reach the goal by step 800; both ended at grid position <strong>(1, 23)</strong>, with zero unwanted contact states or pairs.</p>
+<p>Detailed replay diagnostics show that the BP runs <em>did move and revisit locations</em> before stopping—they were not stationary from the beginning. With schedule 0, G1 reached a constant final pose from <strong>step 460 through 800</strong>; with schedule 1, it remained at its final pose from <strong>step 440 through 800</strong>. In both runs, the planner reported <code>no_feasible_forward_route</code> throughout the stationary suffix. The replays did not identify a short exact repeated position-and-heading cycle before this terminal condition. In other words, simply increasing the deadline could not resolve the route-selection limitation of these Static-policy episodes.</p>
+<div class="table-scroll">
+<table class="results-table">
+<caption>Three residual Static episodes at the 800-step horizon</caption>
+<thead><tr><th scope="col">Saved world and schedule</th><th scope="col">800-step outcome</th><th scope="col">Key diagnostic</th></tr></thead>
+<tbody>
+<tr><td>BP <code>80010004</code> · schedule 0 · Static</td><td>Not reached</td><td>No feasible forward route from step 460</td></tr>
+<tr><td>BP <code>80010004</code> · schedule 1 · Static</td><td>Not reached</td><td>No feasible forward route from step 440</td></tr>
+<tr><td>M <code>80030008</code> · schedule 1 · Static</td><td>Reached at step 479</td><td>Contact-free goal</td></tr>
+</tbody></table>
+</div>
+<div class="maze-gallery extended-replay-gallery">
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1_no_feasible_forward_route-0.gif" alt="Eight-times-speed split-screen MuJoCo replay of G1 in saved BP 80010004, schedule 0, Static. The planner reports no feasible forward route from step 460 until step 800." loading="lazy" decoding="async">
+<figcaption><strong>BP 80010004 · schedule 0 · Static.</strong> G1 explores the maze and eventually stops at (1, 23). From step 460 through step 800, the planner returns <code>no_feasible_forward_route</code>. No unwanted contacts were recorded.</figcaption>
+</figure>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1_no_feasible_forward_route-1.gif" alt="Eight-times-speed split-screen MuJoCo replay of G1 in saved BP 80010004, schedule 1, Static. The planner reports no feasible forward route from step 440 until step 800." loading="lazy" decoding="async">
+<figcaption><strong>BP 80010004 · schedule 1 · Static.</strong> The same saved world with a different obstacle schedule stops at (1, 23). The stationary suffix begins at step 440 and continues through step 800, without unwanted contact.</figcaption>
+</figure>
+<figure>
+<img class="figure-image" src="../assets/spatial-memory/g1_step479.gif" alt="Eight-times-speed split-screen MuJoCo replay of G1 reaching the goal at step 479 in saved M 80030008, schedule 1, Static, without unwanted contact." loading="lazy" decoding="async">
+<figcaption><strong>M 80030008 · schedule 1 · Static.</strong> A longer horizon is sufficient here: G1 reaches the goal at step 479 without unwanted contact.</figcaption>
+</figure>
+</div>
+<p class="small">The GIFs are presentation-speed replays of saved simulation records; animated limb motion is visual only. The right-hand maps visualize saved evaluator geometry and pose, not the robot's observed occupancy memory. <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_forward_first_61ray_emergency_safety_unreached_h400_h800_v1/report.md">800-step follow-up report</a> · <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/tree/phase2/mujoco-proxy-pilot/results/phase2_mujoco/g1_horizon800_residual_replays_v1">Replay diagnostics and trajectory data</a></p>
+<div class="takeaway">A longer action budget resolved most deadline-limited episodes, but <strong>two Static-memory runs remained unable to find a feasible forward route</strong>. The remaining failures point to navigation and memory limitations rather than unwanted collisions in these saved tests.</div>
+</section>
+<hr>
 <section aria-labelledby="limitations-heading">
-<p class="section-no">06 / Limitations &amp; Next Steps</p>
+<p class="section-no">07 / Limitations &amp; Next Steps</p>
 <h2 id="limitations-heading">Toward more realistic humanoid navigation</h2>
 <ul>
 <li><strong>No physical walking:</strong> G1 uses kinematic waypoint translation and turning. Joint-level gait, balance, falls, and safe foot placement are not simulated.</li>
 <li><strong>2D memory from 3D rays:</strong> The sensor uses one horizontal ray plane. There is no depth-camera noise, vertical scan, or 3D voxel memory.</li>
 <li><strong>Simplified human stand-ins:</strong> Moving pedestrians are represented by non-reactive capsule-shaped geometric proxies, not articulated human models.</li>
 <li><strong>Development-only comparison:</strong> All 36 saved fit worlds and a single random seed were used across successive planner revisions. Results should be tested on unseen layouts and additional random seeds.</li>
+<li><strong>Long-horizon Static failures:</strong> Extending the episode deadline did not resolve two BP <code>80010004</code> runs; both eventually returned <code>no_feasible_forward_route</code> without reaching the goal. Future work should investigate replanning, stale memory, and route-feasibility feedback separately.</li>
 <li><strong>Uncalibrated scale:</strong> The 0.75 m/cell grid remains an explicit modeling assumption.</li>
 </ul>
-<p>Next steps are to evaluate optimized emergency sensing and safety interventions on more layouts and pedestrian schedules, validate on held-out layouts and additional seeds, introduce articulated human models, and eventually integrate physically actuated G1 walking. The work currently evaluates simulated spatial memory and navigation, not deployable humanoid locomotion or real-world safety.</p>
+<p>Next steps are to diagnose persistent no-route failures, evaluate independent emergency sensing and horizon extensions on unseen layouts and additional seeds, introduce articulated human models, and eventually integrate physically actuated G1 walking. The work currently evaluates simulated spatial memory and navigation, not deployable humanoid locomotion or real-world safety.</p>
 </section>
 <hr>
 <section aria-labelledby="repro-heading">
 <h2 id="repro-heading">Code, data &amp; reproducibility</h2>
-<p>Source code, saved maze maps, per-episode records, movement-policy comparisons, turn-clearance diagnostics, and provenance hashes are available in the research repository. Each planner revision keeps its own 288-episode result directory; earlier raw results were not replaced.</p>
+<p>Source code, saved maze maps, per-episode records, movement-policy comparisons, emergency-sensing evaluations, 400/800-step continuations, turn-clearance diagnostics, and provenance hashes are available in the research repository. Each planner revision keeps its own 288-episode result directory; earlier raw results were not replaced.</p>
 <p class="sources">
 <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/tree/phase2/mujoco-proxy-pilot">Source code</a> ·
 <a href="https://github.com/fujitamasahir/humanoid-spatial-memory/blob/phase2/mujoco-proxy-pilot/results/phase2_mujoco/phase15_maze_top_views_36/overview_all_36.png">All 36 maze diagrams</a> ·
