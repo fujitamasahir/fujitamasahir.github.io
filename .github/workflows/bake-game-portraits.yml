@@ -1,0 +1,48 @@
+name: Bake native game portraits
+on:
+  push:
+    branches: [experiment/browser-humanoid-game]
+    paths:
+      - '.github/workflows/bake-game-portraits.yml'
+      - 'games/beat-the-humanoid/tools/build_native_portraits.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: bake-native-game-portraits
+  cancel-in-progress: false
+jobs:
+  bake:
+    if: github.ref == 'refs/heads/experiment/browser-humanoid-game'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      MUJOCO_GL: egl
+      LIBGL_ALWAYS_SOFTWARE: '1'
+      EGL_PLATFORM: surfaceless
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: fujitamasahir/humanoid-spatial-memory
+          ref: b50f81255756a9c8bd55dddd2ea72c54d58ebb7d
+          path: .portrait-source
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install headless OpenGL and native MuJoCo
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libegl-mesa0 libgl1 libgl1-mesa-dri libosmesa6
+          python -m pip install 'mujoco==3.17.0' numpy
+      - name: Bake original selection and defeat sprites
+        run: python games/beat-the-humanoid/tools/build_native_portraits.py .portrait-source
+      - name: Commit verified static game assets to the experimental branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add games/beat-the-humanoid/portraits/native
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Bake pinned native G1 character sprites'
+          git push origin HEAD:refs/heads/experiment/browser-humanoid-game

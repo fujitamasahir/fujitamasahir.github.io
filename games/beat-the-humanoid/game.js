@@ -226,15 +226,14 @@ async function playHeroMotion(name){
  if(!await portraitView.load()||token!==motionToken||strategy!==name||!$('setupScreen').classList.contains('active'))return;
  const card=heroCards[HERO_NAMES.indexOf(name)],canvas=$('heroMotion');
  card.appendChild(canvas);card.classList.add('motion-playing');canvas.hidden=false;
- const start=performance.now();let last=-1;
+ let next=0,index=0;
  function tick(now){
   if(token!==motionToken)return;
-  if(!$('setupScreen').classList.contains('active')||strategy!==name||now-start>=3000){stopHeroMotion();return}
-  const index=Math.min(59,Math.floor((now-start)*20/1000));
-  if(index!==last){if(!portraitView.draw(name,index,canvas)){stopHeroMotion();return}last=index}
+  if(!$('setupScreen').classList.contains('active')||strategy!==name||index>=60){stopHeroMotion();return}
+  if(now>=next){if(!portraitView.draw(name,index++,canvas)){stopHeroMotion();return}next=now+50}
   requestAnimationFrame(tick);
  }
- tick(start);
+ requestAnimationFrame(tick);
 }
 $('heroPrev').onclick=()=>cycleStrategy(-1);
 $('heroNext').onclick=()=>cycleStrategy(1);
@@ -245,9 +244,11 @@ heroCards.forEach(card=>{
  card.onclick=()=>selectHero(card.dataset.character);
 });
 positionHeroRing(0);
+$('portraitStatus').textContent='Loading G1 characters…';$('portraitStatus').hidden=false;
 portraitView.load().then(ok=>{
  if(!ok)return;
  for(const card of heroCards){const still=portraitView.still(card.dataset.character);if(still)card.querySelector('img').src=still}
+ $('portraitStatus').hidden=true;console.info('G1 animation source:',portraitView.mode());
 });
 // Shared header: each letter follows a short staggered wave as the phrase swaps.
 const titlePhrases=()=>['BEAT THE HUMANOID','Stop the robot in '+(rules()?.step_limit||80)+' steps!'];
@@ -321,19 +322,18 @@ async function showResultReaction(name,human,celebrate=true){
  img.src=portraitView.still(name)||img.src;
  const loss=human?await portraitView.defeat():null;
  if(token!==resultEffectToken||!$('resultScreen').classList.contains('active')||human&&!loss)return;
- const start=performance.now();let last=-1;canvas.hidden=false;img.hidden=true;
+ let next=0,frame=0;canvas.hidden=false;img.hidden=true;
  function tick(now){
   if(token!==resultEffectToken||!$('resultScreen').classList.contains('active'))return;
-  const elapsed=now-start;
-  if(!human&&elapsed>=3000){canvas.hidden=true;img.hidden=false;return}
-  const index=resultFrame(elapsed,human);
-  if(index!==last){
+  if(!human&&frame>=60){canvas.hidden=true;img.hidden=false;return}
+  if(now>=next){
+   const index=human&&frame>=54?30+(frame-30)%24:frame;
    if(!portraitView.draw(name,index,canvas,loss)){canvas.hidden=true;img.hidden=false;return}
-   last=index;
+   frame++;next=now+50;
   }
   requestAnimationFrame(tick);
  }
- tick(start);
+ requestAnimationFrame(tick);
 }
 function burstConfetti(token){
  const canvas=$('confetti'),ctx=canvas.getContext('2d'),width=canvas.width=innerWidth,height=canvas.height=innerHeight;

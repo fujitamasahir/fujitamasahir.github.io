@@ -120,3 +120,5 @@ body:is([data-difficulty=medium],[data-difficulty=hard]) :is(#liveDifficulty,#re
 
 /* The canvas follows the selected character card, while still images retain their original bob. */
 .hero-card.motion-playing #heroMotion{display:block;animation:none}.result-hero #resultMotion:not([hidden]){animation:none}.result-hero.defeated #resultMotion{filter:none}
+
+.hero-card .character-portrait{animation:heroBob 3.4s ease-in-out infinite}
