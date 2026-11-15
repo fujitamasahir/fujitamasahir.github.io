@@ -47,14 +47,20 @@ main{width:100%;max-width:1480px;margin:auto;padding:8px 16px;display:flex;flex-
 .contact-warning{background:#401b23;border:1px solid #ff7771;color:#ffb4af;padding:7px;text-align:center;font-weight:900;border-radius:5px;font-size:11px}.failure-color{color:#ff8d88!important}
 .controls{text-align:center;font-size:10px;color:var(--muted);line-height:1.35;flex:none}[hidden]{display:none!important}
 @media(min-width:900px) and (min-height:560px){
- body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
- main{flex:1;min-height:0;margin:0 auto}
- .selection{flex:0 0 clamp(146px,25dvh,225px)}
- .model-scroll,.matrix-scroll{max-height:none}
- .review{flex:1;min-height:0}
- .canvas-area{container-type:size}
- .panel canvas{width:100%;height:100%;object-fit:contain}
- @supports(width:1cqh){.panel canvas{width:min(100cqw,100cqh);height:auto;max-width:100%;max-height:100%}}
+ /* Explicit dimensions prevent intrinsic table heights from consuming the viewport.
+    Keep page overflow available as a fallback for browser zoom and smaller windows. */
+ body{--selection-height:clamp(164px,24vh,220px);--map-size:clamp(185px,calc(100vh - var(--selection-height) - 270px),570px);height:auto;min-height:100vh;display:block;overflow-y:auto}
+ main{height:auto;min-height:0;margin:0 auto}
+ .selection{height:var(--selection-height);max-height:var(--selection-height);flex:0 0 auto;grid-template-rows:minmax(0,1fr);align-items:stretch;min-height:0}
+ .model-panel,.case-panel{display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0;max-height:100%}
+ .model-scroll,.matrix-scroll{height:100%;max-height:100%;min-height:0;overflow:auto}
+ .summary-panel{max-height:100%;overflow:auto}
+ .review{flex:0 0 auto;grid-template-rows:auto auto auto auto;min-height:0}
+ .review-layout{height:calc(var(--map-size) + 54px);grid-template-rows:minmax(0,1fr)}
+ .maps{grid-template-rows:minmax(0,1fr)}
+ .canvas-area{min-height:0;min-width:0;container-type:size}
+ .panel canvas{width:min(100%,var(--map-size));height:auto;max-width:100%;max-height:100%;object-fit:contain}
+ @supports(width:1cqh){.panel canvas{width:min(100cqw,100cqh,var(--map-size));height:auto}}
 }
 @media(max-width:899px),(max-height:559px){
  main{padding:9px;gap:9px}.selection{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
