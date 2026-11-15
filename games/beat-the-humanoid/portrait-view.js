@@ -47,7 +47,7 @@ window.portraitView=(()=>{
     build(bundle.renderAssets);
     for(const name of Object.keys(palette)){drawPose(name,bundle.still,null);stills[name]=renderer.domElement.toDataURL('image/png')}
     return true;
-   }catch(error){console.warn('G1 portrait preparation failed',error);return false}
+   }catch(error){console.error('G1 portrait preparation failed',error);const el=document.getElementById('portraitStatus');el.textContent='G1 animation unavailable';el.title=String(error);el.hidden=false;return false}
   })();
   return normalPromise;
  }
@@ -56,7 +56,7 @@ window.portraitView=(()=>{
   defeatPromise??=browserGame.portraits('defeat').then(data=>{
    if(data.frames.length!==54||data.bows.length!==54||data.frames.some(f=>f.length!==bundle.renderAssets.poseLength))throw Error('Defeat pose shape mismatch');
    return data;
-  }).catch(error=>{console.warn('G1 defeat preparation failed',error);return null});
+  }).catch(error=>{console.error('G1 defeat preparation failed',error);toast('Defeat animation unavailable: '+error.message);return null});
   return defeatPromise;
  }
  function draw(name,index,canvas,loss=null){

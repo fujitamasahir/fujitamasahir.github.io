@@ -81,7 +81,7 @@
  function renderPose(){
   check();
   if(!drawingIds.length)drawingIds=drawingGeoms().filter(i=>model.geom_bodyid[i]!==0);
-  return toJson(drawingIds.flatMap(poseFor));
+  return toJson(drawingIds.flatMap(id=>poseFor(id,data)));
  }
  function renderAssets(){
   check();const ids=drawingGeoms(),meshes=[],meshIndex=new Map(),geoms=[];

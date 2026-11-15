@@ -2,7 +2,7 @@
 window.browserGame=(()=>{
  const difficulties={easy:{step_limit:80,max_static_objects:4,max_pedestrians:2,max_observations:20},medium:{step_limit:120,max_static_objects:2,max_pedestrians:1,max_observations:30},hard:{step_limit:160,max_static_objects:1,max_pedestrians:0,max_observations:40}};
  const catalog=fetch('./data/maze_catalog.json').then(async r=>{if(!r.ok)throw Error('Maze catalog unavailable');return (await r.json()).mazes});
- let worker,ready,seq=0,episode,pending,running=false,skip=false,generation=0,backend='grid2d-proxy',wants3d=false;
+ let worker,ready,seq=0,episode,pending,running=false,skip=false,generation=0,backend='mujoco-wasm',wants3d=true;
  const jobs=new Map();
  const status=s=>document.getElementById('browserStatus').textContent=s;
  const label=()=>backend==='mujoco-wasm'?'MUJOCO WASM · EXPERIMENTAL':'2D BROWSER PROTOTYPE';
@@ -10,7 +10,7 @@ window.browserGame=(()=>{
  function warm(){
   if(ready)return ready;
   ready=new Promise((resolve,reject)=>{
-   worker=new Worker('./engine-worker.js?v=5');
+   worker=new Worker('./engine-worker.js?v=6');
    worker.onmessage=({data})=>{
     if(data.type==='ready'){resolve();if(!running)status(label()+' · READY');return}
     if(data.type==='progress'){status(data.message);return}
@@ -55,7 +55,7 @@ window.browserGame=(()=>{
   throw Error('Unsupported local operation: '+url)
  }
  async function play(onFrame,onError){const token=generation;
-  try{status(label()+' · COMPUTING');const data=await pending;if(token!==generation)return;if(data.result.backend!==backend)throw Error('Unexpected physics backend');if(wants3d){status('MUJOCO WASM · PREPARING 3D VIEW');const rendered=await window.g1View.prepare(data.renderAssets);if(!rendered){console.warn(data.renderError||window.g1View.error()||'No 3D geometry');document.getElementById('backendNote').textContent='G1 physics · 3D unavailable · 2D fallback'}}else window.g1View.clear();if(token!==generation)return;status(label()+' · REPLAYING');
+  try{status(label()+' · COMPUTING');const data=await pending;if(token!==generation)return;if(data.result.backend!==backend)throw Error('Unexpected physics backend');if(wants3d){status('MUJOCO WASM · PREPARING 3D VIEW');const rendered=await window.g1View.prepare(data.renderAssets);if(!rendered){console.warn(data.renderError||window.g1View.error()||'No 3D geometry');document.getElementById('backendNote').textContent='G1 physics · 3D unavailable · 2D fallback';document.getElementById('backendNote').title=data.renderError||window.g1View.error()||'No 3D geometry';toast('3D unavailable: '+document.getElementById('backendNote').title)}}else window.g1View.clear();if(data.walkWarning){console.warn('Walking animation fallback:',data.walkWarning);document.getElementById('backendNote').title='Standing-pose fallback: '+data.walkWarning}if(token!==generation)return;status(label()+' · REPLAYING');
    for(const frame of data.frames){if(token!==generation)return;if(skip)break;onFrame(frame);await new Promise(r=>setTimeout(r,130))}
    episode=data;running=false;status(label()+' · READY');onFrame({...data.frames.at(-1),status:'finished',result:data.result});
   }catch(e){running=false;status(label()+' · ERROR: '+e.message);onError(e)}

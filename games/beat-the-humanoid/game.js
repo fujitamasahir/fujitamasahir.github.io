@@ -89,7 +89,7 @@ function drawLive(s){
  const m=current(),robot=s.position?{position:s.position,heading_yaw:s.heading_yaw||0}:null;
  const common={northUp:true,objects:s.objects||[],peds:s.people||[],robot,trajectory:s.trajectory||[]};
  drawMap($('truthCanvas'),m,common);
- if(lastConfig?.render_3d){const ok=g1View.draw($('truthCanvas'),m,s);if(!ok){g1View.hide();$('truthCanvas').hidden=false;if(s.render_pose||g1View.error())$('renderStatus').textContent='3D unavailable · 2D fallback';}}
+ if(lastConfig?.render_3d){const ok=g1View.draw($('truthCanvas'),m,s);if(!ok){g1View.hide();$('truthCanvas').hidden=false;$('renderStatus').textContent='3D unavailable · 2D fallback';}}
  drawMemory($('memoryCanvas'),m,s);
  $('liveStatus').textContent='';
  const hits=s.contact_events||[];const last=hits[hits.length-1];
