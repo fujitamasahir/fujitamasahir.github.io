@@ -2,6 +2,8 @@
 'use strict';
 window.g1View=(()=>{
  const CDN='https://cdn.jsdelivr.net/npm/three@0.178.0/build/';
+ const revisions=new Map();
+ let activeRevision=null;
  let T,renderer,scene,camera,assets,mazeId,ready=false,broken='',moving=[],robotMaterials=[],observeResize,lastFrame,lastMaze;
  const geometryCache=new Set(),materialCache=new Set();
  function resetScene(){
@@ -12,8 +14,8 @@ window.g1View=(()=>{
   scene=null;camera=null;moving=[];robotMaterials=[];mazeId=null;lastFrame=null;lastMaze=null;
   if(renderer)renderer.domElement.hidden=true;
  }
- function clear(){ready=false;broken='';assets=null;resetScene()}
- async function prepare(data){
+ function clear(){ready=false;broken='';assets=null;revisions.clear();activeRevision=null;resetScene()}
+ async function prepare(data,revision=0){
   clear();
   if(!data)return false;
   try{
@@ -29,7 +31,7 @@ window.g1View=(()=>{
     renderer.domElement.addEventListener('webglcontextrestored',()=>{clear()});
    }
    if(!data.meshes.length||!data.geoms.length)throw Error('Empty geometry');
-   assets=data;ready=true;return true;
+   assets=data;revisions.set(revision,data);activeRevision=revision;ready=true;return true;
   }catch(error){broken=String(error);console.warn('3D renderer unavailable',error);return false}
  }
  function geo(g){geometryCache.add(g);return g}
@@ -79,7 +81,10 @@ window.g1View=(()=>{
   renderer.setScissorTest(false);renderer.setViewport(0,0,w,h);renderer.clear();
   renderer.setViewport((w-vw)/2,(h-vh)/2,vw,vh);renderer.render(scene,camera);
  }
+ function register(revision,data){if(data?.meshes?.length&&data?.geoms?.length)revisions.set(revision,data)}
  function draw(canvas,maze,frame){
+  const revision=frame.scene_revision??0;
+  if(ready&&activeRevision!==revision){const next=revisions.get(revision);if(!next)return false;resetScene();assets=next;activeRevision=revision;}
   if(!ready||!assets||!Array.isArray(frame.render_pose)||frame.render_pose.length!==assets.poseLength)return false;
   try{
    if(!scene||mazeId!==maze.id)build(maze,frame.strategy);
@@ -94,5 +99,5 @@ window.g1View=(()=>{
   }catch(error){broken=String(error);console.warn('3D frame unavailable',error);ready=false;if(renderer)renderer.domElement.hidden=true;canvas.hidden=false;return false}
  }
  function hide(){if(renderer)renderer.domElement.hidden=true}
- return {prepare,draw,hide,clear,error:()=>broken};
+ return {prepare,register,draw,hide,clear,error:()=>broken};
 })();

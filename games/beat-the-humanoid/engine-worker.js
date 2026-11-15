@@ -1,11 +1,11 @@
 const CDN='https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
 const files=['__init__','simulation','observation','scheduling','memory','navigation','evaluation','mujoco_navigation','mujoco_perception','emergency_safety','pedestrian_tracking'].map(n=>'spatial_memory/'+n+'.py').concat('browser_engine.py','mujoco.py','portrait_poses.py');
 const ready=(async()=>{
- importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=6');
+ importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=9');
  const p=await loadPyodide({indexURL:CDN});
  await p.loadPackage('numpy');p.FS.mkdirTree('/game/spatial_memory');
- await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file+'?v=6');if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
- p.runPython("import sys; sys.path.insert(0, '/game'); from browser_engine import browser_episode");return p;
+ await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file+'?v=9');if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
+ p.runPython("import sys; sys.path.insert(0, '/game'); from browser_engine import session_start, session_next, session_edit, session_close");return p;
 })();
 let nativeReady;
 async function prepareNative(p){
@@ -22,34 +22,57 @@ async function prepareNative(p){
  return nativeReady;
 }
 ready.then(()=>postMessage({type:'ready'}),e=>postMessage({type:'error',error:String(e)}));
+let active=null,exportedRevision=-1;
+function invoke(p,name,...args){const fn=p.globals.get(name);try{return fn(...args)}finally{fn.destroy()}}
+function closeSession(p){try{invoke(p,'session_close')}finally{wasmBridge.close();active=null;exportedRevision=-1}}
 async function handle(data){
- const portrait=data.payload.task==='portraits';
- const native=portrait||data.payload.backend==='mujoco-wasm';
+ const payload=data.payload,task=payload.task;
+ const p=await ready;
  try{
-  const p=await ready;
-  if(native){if(!portrait)postMessage({type:'progress',message:'MUJOCO WASM · LOADING G1 / CHECKING RAY API'});await prepareNative(p);if(!portrait)postMessage({type:'progress',message:'MUJOCO WASM · COMPUTING G1 EPISODE'})}
-  if(portrait)p.runPython('from portrait_poses import portrait_bundle');
-  const fn=p.globals.get(portrait?'portrait_bundle':'browser_episode');
-  try{
-   const value=JSON.parse(fn(portrait?data.payload.reaction:JSON.stringify(data.payload)));
-   const transfer=[];
-   if(portrait&&data.payload.reaction==='normal'){
-    value.renderAssets=wasmBridge.renderAssets();
-    for(const mesh of value.renderAssets.meshes)transfer.push(mesh.positions.buffer,mesh.indices.buffer);
-    if(value.still.length!==value.renderAssets.poseLength||Object.values(value.clips).some(clip=>clip.length!==60||clip.some(f=>f.length!==value.renderAssets.poseLength)))throw Error('Portrait dimensions mismatch');
-   }
-   if(!portrait&&native&&data.payload.render_3d&&!value.renderError){
+  if(task==='portraits'){
+   if(active)throw Error('Portrait generation cannot interrupt a live evaluation');
+   await prepareNative(p);
+   try{
+    p.runPython('from portrait_poses import portrait_bundle');
+    const value=JSON.parse(invoke(p,'portrait_bundle',payload.reaction)),transfer=[];
+    if(payload.reaction==='normal'){
+     value.renderAssets=wasmBridge.renderAssets();
+     for(const m of value.renderAssets.meshes)transfer.push(m.positions.buffer,m.indices.buffer);
+     if(value.still.length!==value.renderAssets.poseLength||Object.values(value.clips).some(clip=>clip.length!==60||clip.some(f=>f.length!==value.renderAssets.poseLength)))throw Error('Portrait dimensions mismatch');
+    }
+    postMessage({id:data.id,value},transfer);
+   }finally{wasmBridge.close()}
+   return;
+  }
+  if(task==='start'){
+   if(active)throw Error('An evaluation is already active');
+   if(payload.backend==='mujoco-wasm'){postMessage({type:'progress',message:'MUJOCO WASM · LOADING G1'});await prepareNative(p)}
+   const value=JSON.parse(invoke(p,'session_start',JSON.stringify(payload)));
+   active=payload;exportedRevision=-1;postMessage({id:data.id,value});return;
+  }
+  if(!active)throw Error('No active evaluation');
+  if(task==='validate'||task==='edit'){
+   const value=JSON.parse(invoke(p,'session_edit',JSON.stringify(payload.layout),task==='edit'));
+   postMessage({id:data.id,value});return;
+  }
+  if(task==='advance'){
+   const value=JSON.parse(invoke(p,'session_next',payload.count||1)),transfer=[];
+   if(active.render_3d&&!value.renderError&&exportedRevision!==value.sceneRevision){
     try{
      value.renderAssets=wasmBridge.renderAssets();
-     for(const mesh of value.renderAssets.meshes)transfer.push(mesh.positions.buffer,mesh.indices.buffer);
      if(value.frames.some(f=>f.render_pose?.length!==value.renderAssets.poseLength))throw Error('Render pose shape mismatch');
-    }catch(error){delete value.renderAssets;transfer.length=0;value.renderError=String(error)}
+     for(const m of value.renderAssets.meshes)transfer.push(m.positions.buffer,m.indices.buffer);
+     exportedRevision=value.sceneRevision;
+    }catch(e){delete value.renderAssets;transfer.length=0;value.renderError=String(e)}
    }
-   postMessage({id:data.id,value},transfer);
+   if(value.result)closeSession(p);
+   postMessage({id:data.id,value},transfer);return;
   }
-  finally{fn.destroy()}
- }catch(e){postMessage({id:data.id,error:String(e)})}
- finally{if(native)wasmBridge.close()}
+  if(task==='abort'){closeSession(p);postMessage({id:data.id,value:{ok:true}});return}
+  throw Error('Unknown game worker task');
+ }catch(e){
+  if(task==='start'||task==='advance'||task==='abort'){if(active)closeSession(p);else wasmBridge.close()}
+  throw e;
+ }
 }
-// The bridge owns a single compiled scene. Portrait and game jobs must run serially.
 let queue=Promise.resolve();self.onmessage=({data})=>{queue=queue.then(()=>handle(data)).catch(error=>postMessage({id:data.id,error:String(error)}))};

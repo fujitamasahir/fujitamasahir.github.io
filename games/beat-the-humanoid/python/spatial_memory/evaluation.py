@@ -14,7 +14,7 @@ def map_errors(memory, geometry, changed, departed):
     }
 
 
-def run_episode(scenario, config, method, seed, *, _controller_factory=None,
+def iter_episode(scenario, config, method, seed, *, _controller_factory=None,
                 _planner=None, _observation_callback=None, _frame_callback=None,
                 _movement_checker=None, _observation_provider=None,
                 _g1_planner=None, _action_checker=None,
@@ -105,6 +105,7 @@ def run_episode(scenario, config, method, seed, *, _controller_factory=None,
         frames.append(frame)
 
     capture(plan(agent.memory.grid, position, scenario.goal, config['unknown']))
+    yield None  # Completed step 0; all evaluator locals remain live.
     for _ in range(config['max_steps']):
         if position == scenario.goal:
             break
@@ -260,6 +261,7 @@ def run_episode(scenario, config, method, seed, *, _controller_factory=None,
         frames[-1]['blocked_reason'] = blocked_reason
         frames[-1]['heading_changed'] = bool(abs(
             (heading_yaw - frames[-2]['heading_yaw'] + np.pi) % (2*np.pi) - np.pi) > 1e-9)
+        yield None  # Completed step; pause before the next world.advance().
     failure_reason = None
     if position != scenario.goal:
         if _g1_planner is not None and no_route_steps:
@@ -414,3 +416,13 @@ def run_episode(scenario, config, method, seed, *, _controller_factory=None,
         metrics['common_horizon_steps'] = horizon
         metrics['common_horizon_memory_frozen_after'] = metrics['elapsed_steps']
     return metrics, frames
+
+
+def run_episode(*args, **kwargs):
+    """Compatibility wrapper: consume the same evaluator without pausing."""
+    iterator=iter_episode(*args, **kwargs)
+    while True:
+        try:
+            next(iterator)
+        except StopIteration as done:
+            return done.value
