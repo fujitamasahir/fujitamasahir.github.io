@@ -3,9 +3,10 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BEAT THE HUMANOID</title>
-<link rel="stylesheet" href="./style.css?v=7">
+<link rel="stylesheet" href="./style.css?v=8">
 </head>
-<body>
+<body class="booting">
+<div id="bootLoading" class="boot-loading" role="status" aria-live="polite"><div class="boot-loading-content"><span class="boot-spinner" aria-hidden="true"></span><div class="boot-title">BEAT THE HUMANOID</div><div id="bootLoadingText">NOW LOADING...</div><button id="bootRetry" type="button" hidden>RETRY</button></div></div>
 <div class="grain"></div><div class="browser-banner"><a href="../../projects/humanoid-spatial-memory.html">← RESEARCH</a><span id="browserStatus" role="status">MUJOCO WASM · LOADING PYTHON</span><span id="backendNote">G1 physics · 3D replay</span></div>
 <header><button id="settingsBtn" type="button" aria-label="Settings" class="settings-btn"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 8H27M5 16H27M5 24H27" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg><span id="setupDifficulty">EASY</span><span class="difficulty-trigger-hint">LT / RT</span></button><div id="gameTitle" class="game-title" aria-label="Beat the Humanoid. Stop the robot in 80 steps!"><span id="titleLetters" aria-hidden="true">BEAT THE HUMANOID</span></div><button id="fullscreenBtn" class="fullscreen-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (Xbox View button)" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="expand-icon" d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><path class="collapse-icon" d="M3 8h5V3m13 5h-5V3M8 21v-5H3m13 5v-5h5"/></svg></button><div id="padStatus" class="pad-status" aria-label="Controller disconnected" role="img"><svg viewBox="0 0 72 48" aria-hidden="true"><path class="pad-body" d="M22 8H50Q60 8 65 21L69 34Q71 44 62 43L49 32H23L10 43Q1 44 3 34L7 21Q12 8 22 8Z" fill="#213246" stroke="currentColor" stroke-width="2.5"/><path d="M20 14V26M14 20H26" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><g fill="currentColor"><circle cx="52" cy="14" r="2.5"/><circle cx="58" cy="20" r="2.5"/><circle cx="46" cy="20" r="2.5"/><circle cx="52" cy="26" r="2.5"/></g><g class="pad-stop" stroke="#ff535b" stroke-width="4" fill="none"><circle cx="36" cy="24" r="21"/><path d="M21 9L51 39"/></g></svg></div></header>
 <main>
@@ -39,7 +40,7 @@
   <div class="live-counters"><div class="live-count"><span class="count-label">STEPS</span><b id="stepValue">0</b><span id="stepLimit" class="count-limit">/ 80</span></div><div class="live-count"><span class="count-label">MEMORY SCANS</span><b id="obsValue">0</b><span id="obsLimit" class="count-limit">/ 20</span></div></div><div class="live-actions"><button id="skipBtn" class="secondary-btn"><kbd class="a">A</kbd> SKIP TO RESULTS</button></div><div id="liveContact" class="contact-alert" role="alert" hidden></div><div id="liveStatus" class="live-status" role="status"></div>
 </section>
 <section id="resultScreen" class="screen result-screen">
-  <div class="result-body"><div class="result-info"><div id="winner" class="winner">AI WINS</div><div class="result-hero" id="resultHero"><img id="resultPortrait" alt="G1 result pose"><canvas id="resultMotion" width="360" height="480" hidden aria-hidden="true"></canvas></div><p id="winnerCaption" class="winner-caption" hidden></p><div class="result-summary" id="resultSummary"></div></div><div class="result-map"><h2>FINAL SPATIAL MEMORY</h2><canvas id="finalMemoryCanvas" width="900" height="700" aria-label="Final spatial memory map"></canvas></div></div>
+  <div class="result-body"><div class="result-info"><div id="winner" class="winner">AI WINS</div><div class="result-hero" id="resultHero"><img id="resultPortrait" alt="G1 result pose" hidden><canvas id="resultMotion" width="360" height="480" hidden aria-hidden="true"></canvas></div><p id="winnerCaption" class="winner-caption" hidden></p><div class="result-summary" id="resultSummary"></div></div><div class="result-map"><h2>FINAL SPATIAL MEMORY</h2><canvas id="finalMemoryCanvas" width="900" height="700" aria-label="Final spatial memory map"></canvas></div></div>
   <div class="result-actions"><button id="newBtn" class="start-btn"><kbd class="a">A</kbd> NEW CHALLENGE</button><button id="reviewBtn" class="secondary-btn"><kbd class="b">B</kbd> REVIEW</button></div>
 </section>
 <section id="reviewScreen" class="screen live-screen">
@@ -53,5 +54,5 @@
 
 <div id="settingsModal" class="settings-modal" hidden><div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle"><h2 id="settingsTitle">DIFFICULTY</h2><div id="difficultyOptions" class="difficulty-options"></div><div class="settings-actions"><button id="settingsApply" class="start-btn" type="button"><kbd class="a">A</kbd> CONFIRM</button><button id="settingsCancel" class="secondary-btn" type="button"><kbd class="b">B</kbd> BACK</button></div></div></div>
 <canvas id="confetti" hidden aria-hidden="true"></canvas><div id="toast" role="status"></div>
-<script src="./g1-view.js?v=6"></script><script src="./browser-client.js?v=6"></script><script src="./portrait-view.js?v=7"></script><script src="./game.js?v=7"></script>
+<script src="./g1-view.js?v=8"></script><script src="./browser-client.js?v=6"></script><script src="./portrait-view.js?v=7"></script><script src="./game.js?v=8"></script>
 </body></html>

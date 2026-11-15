@@ -168,9 +168,9 @@ else if($('liveScreen').classList.contains('active')){if(edge(0))skipChallenge()
 else if($('resultScreen').classList.contains('active')){if(edge(0))$('newBtn').click();else if(edge(1))openReview()}
 else if($('reviewScreen').classList.contains('active')){if(edge(1))closeReview();else if(edge(6)){resetReviewHold();renderReview(0)}else if(edge(7)){resetReviewHold();renderReview(reviewSteps.length-1)}else updateReviewSeek(gp,cur,now)}
 }else{for(const k of Object.keys(repeats))delete repeats[k];resetReviewHold();resetDifficultyStick()}if(!$('reviewScreen').classList.contains('active'))resetReviewHold();if(!gp||settingsOpen||!$('setupScreen').classList.contains('active')){heroStickDir=0;delete repeats[14];delete repeats[15]}gamepadPrev=cur;requestAnimationFrame(gamepadLoop)}
-window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if($('liveScreen').classList.contains('active')&&(k==='enter'||k==='a')){e.preventDefault();if(!e.repeat)skipChallenge();return}if($('resultScreen').classList.contains('active')){if(k==='b'){e.preventDefault();if(!e.repeat)openReview()}else if(k==='enter'||k==='a'){e.preventDefault();if(!e.repeat)$('newBtn').click()}return}if($('reviewScreen').classList.contains('active')){if(k==='arrowleft'||k==='arrowright'){e.preventDefault();moveReview(k==='arrowleft'?-1:1)}else if(k==='escape'||k==='b'){e.preventDefault();if(!e.repeat)closeReview()}return}if(!$('setupScreen').classList.contains('active'))return;if(settingsOpen){if(['arrowup','arrowleft','arrowdown','arrowright','enter','escape','b','m'].includes(k)){e.preventDefault();if(k==='arrowup'||k==='arrowleft')moveDifficulty(-1);else if(k==='arrowdown'||k==='arrowright')moveDifficulty(1);else if(k==='enter')applyDifficulty();else closeSettings()}return}if(k==='m'||k==='escape'){e.preventDefault();openSettings();return}if(k==='arrowleft')moveCursor(-1,0);else if(k==='arrowright')moveCursor(1,0);else if(k==='arrowup')moveCursor(0,-1);else if(k==='arrowdown')moveCursor(0,1);else if(k==='[')setMaze(mazeIndex-1);else if(k===']')setMaze(mazeIndex+1);else if(k==='x')place([...cursor],false,'object');else if(k==='y')place([...cursor],false,'ped');else if(k==='b'||k==='backspace')place(cursor,true);else if(k==='enter')$('startBtn').click();else if(k===' '){e.preventDefault();startChallenge().catch(e=>toast(e.message))}else if('123'.includes(k)){document.querySelector(`[data-strategy="${['','periodic','age','uncertainty'][+k]}"]`)?.click()}});
+window.addEventListener('keydown',e=>{if(document.body.classList.contains('booting'))return;const k=e.key.toLowerCase();if($('liveScreen').classList.contains('active')&&(k==='enter'||k==='a')){e.preventDefault();if(!e.repeat)skipChallenge();return}if($('resultScreen').classList.contains('active')){if(k==='b'){e.preventDefault();if(!e.repeat)openReview()}else if(k==='enter'||k==='a'){e.preventDefault();if(!e.repeat)$('newBtn').click()}return}if($('reviewScreen').classList.contains('active')){if(k==='arrowleft'||k==='arrowright'){e.preventDefault();moveReview(k==='arrowleft'?-1:1)}else if(k==='escape'||k==='b'){e.preventDefault();if(!e.repeat)closeReview()}return}if(!$('setupScreen').classList.contains('active'))return;if(settingsOpen){if(['arrowup','arrowleft','arrowdown','arrowright','enter','escape','b','m'].includes(k)){e.preventDefault();if(k==='arrowup'||k==='arrowleft')moveDifficulty(-1);else if(k==='arrowdown'||k==='arrowright')moveDifficulty(1);else if(k==='enter')applyDifficulty();else closeSettings()}return}if(k==='m'||k==='escape'){e.preventDefault();openSettings();return}if(k==='arrowleft')moveCursor(-1,0);else if(k==='arrowright')moveCursor(1,0);else if(k==='arrowup')moveCursor(0,-1);else if(k==='arrowdown')moveCursor(0,1);else if(k==='[')setMaze(mazeIndex-1);else if(k===']')setMaze(mazeIndex+1);else if(k==='x')place([...cursor],false,'object');else if(k==='y')place([...cursor],false,'ped');else if(k==='b'||k==='backspace')place(cursor,true);else if(k==='enter')$('startBtn').click();else if(k===' '){e.preventDefault();startChallenge().catch(e=>toast(e.message))}else if('123'.includes(k)){document.querySelector(`[data-strategy="${['','periodic','age','uncertainty'][+k]}"]`)?.click()}});
 $('physicsBackend').addEventListener('change',()=>{$('render3d').disabled=$('physicsBackend').value!=='mujoco-wasm';$('backendNote').textContent=$('render3d').disabled?'Grid proxy · not MuJoCo physics':'G1 physics · optional 3D display'});
-(async()=>{try{const d=await api('/api/catalog');catalog=d.mazes;difficultyRules=d.difficulties;syncDifficulty();renderEditor();validate();gamepadLoop();playHeroMotion(strategy)}catch(e){toast(e.message);console.error(e)}})();
+
 
 let motionToken=0;
 const HERO_NAMES=['periodic','age','uncertainty'];
@@ -244,12 +244,27 @@ heroCards.forEach(card=>{
  card.onclick=()=>selectHero(card.dataset.character);
 });
 positionHeroRing(0);
-$('portraitStatus').textContent='Loading G1 characters…';$('portraitStatus').hidden=false;
-portraitView.load().then(ok=>{
- if(!ok)return;
- for(const card of heroCards){const still=portraitView.still(card.dataset.character);if(still)card.querySelector('img').src=still}
- $('portraitStatus').hidden=true;console.info('G1 animation source:',portraitView.mode());
-});
+$('bootRetry').onclick=()=>location.reload();
+async function initializeGame(){
+ try{
+  const [d,ok]=await Promise.all([api('/api/catalog'),portraitView.load()]);
+  if(!ok)throw Error('G1 characters could not be loaded');
+  await Promise.all(heroCards.map(async card=>{
+   const still=portraitView.still(card.dataset.character);
+   if(!still)throw Error('Missing G1 portrait');
+   const img=card.querySelector('img');img.src=still;await img.decode();
+  }));
+  catalog=d.mazes;difficultyRules=d.difficulties;syncDifficulty();renderEditor();await validate();
+  $('portraitStatus').hidden=true;
+  document.body.classList.remove('booting');$('bootLoading').hidden=true;
+  gamepadLoop();playHeroMotion(strategy);
+ }catch(error){
+  console.error('Game initialization failed',error);
+  $('bootLoadingText').textContent='LOADING FAILED · PLEASE RETRY';
+  $('bootLoadingText').title=String(error);
+  $('bootRetry').hidden=false;$('bootLoading').classList.add('failed');
+ }
+}
 // Shared header: each letter follows a short staggered wave as the phrase swaps.
 const titlePhrases=()=>['BEAT THE HUMANOID','Stop the robot in '+(rules()?.step_limit||80)+' steps!'];
 let titleIndex=0;
@@ -306,7 +321,7 @@ function stopResultEffects(){
  const motion=$('resultMotion'),confetti=$('confetti');
  motion.hidden=true;motion.getContext('2d').clearRect(0,0,motion.width,motion.height);
  confetti.hidden=true;confetti.getContext('2d').clearRect(0,0,confetti.width,confetti.height);
- $('resultPortrait').hidden=false;
+ $('resultPortrait').hidden=true;
 }
 const DEFEAT_DROP_FRAMES=30,DEFEAT_LOOP_FRAMES=24,RESULT_FPS=20;
 function resultFrame(elapsed,human){
@@ -315,20 +330,22 @@ function resultFrame(elapsed,human){
 }
 async function showResultReaction(name,human,celebrate=true){
  const token=++resultEffectToken,img=$('resultPortrait'),canvas=$('resultMotion');
- canvas.hidden=true;img.hidden=false;img.src=portraitView.still(name)||'./portraits/'+name+'.svg';
+ canvas.hidden=true;img.hidden=true;img.removeAttribute('src');
  $('resultHero').classList.toggle('defeated',human);
  if(human&&celebrate)burstConfetti(token);
  if(!await portraitView.load()||token!==resultEffectToken||!$('resultScreen').classList.contains('active'))return;
- img.src=portraitView.still(name)||img.src;
+ const still=portraitView.still(name);
  const loss=human?await portraitView.defeat():null;
  if(token!==resultEffectToken||!$('resultScreen').classList.contains('active')||human&&!loss)return;
- let next=0,frame=0;canvas.hidden=false;img.hidden=true;
+ if(!portraitView.draw(name,0,canvas,loss))return;
+ canvas.hidden=false;
+ let next=0,frame=1;
  function tick(now){
   if(token!==resultEffectToken||!$('resultScreen').classList.contains('active'))return;
-  if(!human&&frame>=60){canvas.hidden=true;img.hidden=false;return}
+  if(!human&&frame>=60){if(still){img.src=still;img.decode().then(()=>{if(token===resultEffectToken&&$('resultScreen').classList.contains('active')){canvas.hidden=true;img.hidden=false}}).catch(error=>console.warn('Winner still unavailable',error))}return}
   if(now>=next){
    const index=human&&frame>=54?30+(frame-30)%24:frame;
-   if(!portraitView.draw(name,index,canvas,loss)){canvas.hidden=true;img.hidden=false;return}
+   if(!portraitView.draw(name,index,canvas,loss)){canvas.hidden=true;img.hidden=true;return}
    frame++;next=now+50;
   }
   requestAnimationFrame(tick);
@@ -421,3 +438,5 @@ $('reviewBtn').onclick=openReview;$('reviewBack').onclick=closeReview;
 $('reviewPrev').onclick=()=>moveReview(-1);$('reviewNext').onclick=()=>moveReview(1);
 $('reviewFirst').onclick=()=>{resetReviewHold();renderReview(0)};$('reviewLast').onclick=()=>{resetReviewHold();renderReview(reviewSteps.length-1)};
 $('reviewSlider').oninput=()=>renderReview(Number($('reviewSlider').value));
+
+initializeGame();
