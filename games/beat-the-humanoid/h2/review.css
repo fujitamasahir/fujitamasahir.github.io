@@ -82,3 +82,10 @@ main{width:100%;max-width:1480px;margin:auto;padding:8px 16px;display:flex;flex-
 @media(min-width:1080px) and (min-height:560px){.model-description{max-height:100%}.selection{grid-template-columns:minmax(155px,1fr) minmax(340px,2.15fr) minmax(300px,1.8fr) minmax(150px,1fr)}}
 @media(max-width:1079px),(max-height:559px){.model-description{grid-column:1/-1;max-height:145px}.model-description h3{font-size:13px}.model-description p{font-size:12px}}
 @media(max-width:600px){.model-description{grid-column:auto}.model-table tbody button{font-size:10px}.model-table thead,.matrix thead{font-size:9px}}
+
+/* Same fullscreen and controller-status SVGs and states as the game header. */
+.review-header-icons{display:flex;align-items:center;justify-self:end;gap:14px}
+.fullscreen-btn{width:40px;height:40px;display:grid;place-items:center;padding:8px;border:1px solid #34475d;border-radius:8px;background:#101a27;color:#d1e0ef;cursor:pointer}
+.fullscreen-btn svg{width:22px;height:22px}.fullscreen-btn:hover,.fullscreen-btn:focus-visible{color:#65e0ec;border-color:#65e0ec}.fullscreen-btn .collapse-icon,.fullscreen-btn[aria-pressed=true] .expand-icon{display:none}.fullscreen-btn[aria-pressed=true] .collapse-icon{display:inline}
+.pad-status{width:65px;height:48px;color:#66788b;display:grid;place-items:center}.pad-status svg{width:100%;height:100%;overflow:visible}.pad-status.connected{color:#75e7ac;filter:drop-shadow(0 0 7px #56ed9b)}.pad-status.connected .pad-body{fill:#234b3e}.pad-status.connected .pad-stop{display:none}
+@media(max-width:600px){.review-header-icons{gap:4px}.fullscreen-btn{width:29px;height:29px;padding:4px}.fullscreen-btn svg{width:18px;height:18px}.pad-status{width:36px;height:29px}}

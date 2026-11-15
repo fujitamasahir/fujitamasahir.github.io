@@ -2,7 +2,8 @@
 'use strict';
 (function(root){
  const sourceRepo='fujitamasahir/humanoid-spatial-memory',sourceCommit='3b208befeb268cb2ae789add7deaaf859abcfc5a';
- const source='https://raw.githubusercontent.com/'+sourceRepo+'/'+sourceCommit+'/';
+ const offlineSource=root.document?.querySelector('meta[name="h2-archive-base"]')?.content;
+ const source=offlineSource||'https://raw.githubusercontent.com/'+sourceRepo+'/'+sourceCommit+'/';
  const folder='results/phase2_mujoco/h2_comprehensive_benchmark_v1/';
  const hfFolder='results/phase2_mujoco/h2_high_frequency_dynamics_v1/';
  const recoveryFolder='results/phase2_mujoco/h2_full_spatial_memory_replay_v1/';
@@ -18,7 +19,7 @@
   if(quoted||!rows.length)throw Error('Invalid benchmark CSV');
   const header=rows.shift();return rows.map(r=>{if(r.length!==header.length)throw Error('Invalid CSV row width');return Object.fromEntries(header.map((h,i)=>[h,r[i]]))})
  }
- async function fetchChecked(url,signal){const res=await fetch(url,{signal});if(!res.ok)throw Error('Archive request failed (HTTP '+res.status+')');return res}
+ async function fetchChecked(url,signal){const res=await fetch(url,{signal});if(!res.ok){if(offlineSource&&res.status===503)throw Error('Local research archive unavailable. Run the exhibition archive preflight in the README.');throw Error('Archive request failed (HTTP '+res.status+')')}return res}
  const isTrue=value=>value===true||String(value).toLowerCase()==='true'||value==='1';
  function buildIndex(local,manifest,modelRows,failureRows,recoveryRows,knownSummary,correctionRows,descriptions){
   if(manifest.schema_version!=='h2_comprehensive_replay_index_v1'||manifest.entries.length!==7776||local.maps.length!==36||recoveryRows.length!==4752)throw Error('Unexpected H2 archive size');
@@ -107,7 +108,7 @@
   return {...e,map,model,choice,schedule:choice.number,success:!index.failures.has(k),scanLimit:20,stepLimit:80}
  }
  const rawURL=entry=>source+entry.path;
- const originalURL=entry=>'https://github.com/'+sourceRepo+'/blob/'+sourceCommit+'/'+entry.path;
+ const originalURL=entry=>offlineSource?rawURL(entry):'https://github.com/'+sourceRepo+'/blob/'+sourceCommit+'/'+entry.path;
  const mapCache=new Map();
  async function loadMap(entry,signal){
   const n=entry.map.number,p=hfFolder+'maps/map_'+String(n).padStart(2,'0')+'_'+entry.map.family+'.json';

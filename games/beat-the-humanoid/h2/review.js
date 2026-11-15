@@ -133,8 +133,26 @@ function scheduleTick(){clearTimeout(timer);if(!playing)return;timer=setTimeout(
 function toggle(){if(retry){retry();return}playing?pause():startPlayback()}
 function cycleSpeed(){speedIndex=wrap(speedIndex+1,speeds.length);$('speed').textContent='SPEED '+speeds[speedIndex]+'×';if(playing)scheduleTick()}
 function back(){location.href='./'}
-async function fullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{ $('fullscreen').title='Fullscreen blocked by browser; click to retry' }}
-$('back').onclick=back;$('fullscreen').onclick=fullscreen;$('modelNext').onclick=()=>select(modelIndex+1,scheduleIndex,mazeIndex);$('nextFailure').onclick=nextFailure;
+let fullscreenPending=false;
+function fullscreenElement(){return document.fullscreenElement||document.webkitFullscreenElement||null}
+function syncFullscreen(){
+ const active=!!fullscreenElement(),b=$('fullscreenBtn');
+ b.setAttribute('aria-pressed',String(active));
+ b.setAttribute('aria-label',active?'Exit fullscreen':'Enter fullscreen');
+ b.title=(active?'Exit fullscreen':'Fullscreen')+' (Xbox View button)';
+}
+async function fullscreen(){
+ if(fullscreenPending)return;
+ fullscreenPending=true;let blocked=false;
+ try{
+  if(fullscreenElement()){const exit=document.exitFullscreen||document.webkitExitFullscreen;if(!exit)throw Error('Fullscreen exit unavailable');await exit.call(document)}
+  else{const root=document.documentElement,enter=root.requestFullscreen||root.webkitRequestFullscreen;if(!enter)throw Error('Fullscreen unavailable');await enter.call(root)}
+ }catch{blocked=true}finally{fullscreenPending=false;syncFullscreen();if(blocked)$('fullscreenBtn').title='Fullscreen blocked by browser; click to retry'}
+}
+document.addEventListener('fullscreenchange',syncFullscreen);
+document.addEventListener('webkitfullscreenchange',syncFullscreen);
+syncFullscreen();
+$('back').onclick=back;$('fullscreenBtn').onclick=fullscreen;$('modelNext').onclick=()=>select(modelIndex+1,scheduleIndex,mazeIndex);$('nextFailure').onclick=nextFailure;
 $('first').onclick=()=>seek(0);$('prev').onclick=()=>seek(cursor-1);$('next').onclick=()=>seek(cursor+1);$('last').onclick=()=>record&&seek(record.frames.length-1);
 $('slider').oninput=e=>seek(e.target.value);$('play').onclick=toggle;$('speed').onclick=cycleSpeed;
 window.addEventListener('keydown',e=>{
@@ -162,6 +180,7 @@ function repeatDirection(state,dir,now,move,interval){
 let previous=null,mainHold={dir:'',next:0},matrixHold={dir:'',next:0};
 function gamepad(now){
  const pad=[...(navigator.getGamepads?.()||[])].find(Boolean);
+ const status=$('padStatus');status.classList.toggle('connected',!!pad);status.setAttribute('aria-label',pad?'Controller connected':'Controller disconnected');
  if(pad){
   const buttons=new Set(pad.buttons.flatMap((b,i)=>b.pressed||b.value>.55?[i]:[]));
   const edge=i=>previous!==null&&buttons.has(i)&&!previous.has(i);
