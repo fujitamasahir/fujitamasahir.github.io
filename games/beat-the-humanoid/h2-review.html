@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>H2 Experiment Review | Beat the Humanoid</title><link rel="stylesheet" href="./h2/review.css?v=1"></head>
+<body><header><a href="./" class="back">← BEAT THE HUMANOID</a><div><span class="eyebrow">RECORDED RESEARCH DATA</span><h1>H2 EXPERIMENT REVIEW</h1></div><a class="back research" href="../../projects/humanoid-spatial-memory.html">RESEARCH ↗</a></header>
+<main>
+ <div class="intro"><div><strong>High-frequency dynamic environment evaluation</strong><p>36 unseen mazes · 2 schedules · 13 models · 936 recorded episodes. Objects appear, relocate or disappear at every active step. Original MuJoCo results, not a new simulation.</p></div><span class="verified" id="verified" hidden>SHA-256 VERIFIED</span></div>
+ <section class="selectors" aria-label="Choose experiment">
+  <label>MAZE<select id="map" disabled></select></label>
+  <label>SCHEDULE<select id="schedule" disabled><option value="0">Schedule 1 (source 0)</option><option value="1">Schedule 2 (source 1)</option></select></label>
+  <label>MODEL<select id="model" disabled></select></label>
+  <div class="selection-stat"><span>MODEL GOAL COMPLETIONS</span><b id="modelGoals">—</b></div>
+ </section>
+ <div class="status" role="status" id="status">LOADING EXPERIMENT INDEX…</div>
+ <section class="review" id="review" hidden>
+  <div class="stats"><div><small>RECORDED OUTCOME</small><b id="outcome">—</b></div><div><small>FINAL STEPS</small><b id="finalSteps">—</b></div><div><small>FINAL PAID SCANS</small><b id="finalScans">—</b></div><div><small>TRAVEL DISTANCE</small><b id="distance">—</b></div><div><small>UNWANTED CONTACTS</small><b id="contacts">—</b></div></div>
+  <div class="maps"><article class="panel"><h2>GROUND TRUTH <small>Recorded positions &amp; trajectory</small></h2><canvas id="truth" width="750" height="750" aria-label="Ground truth maze, robot trajectory and recorded dynamic hazards"></canvas><div class="legend"><span><i class="robot"></i>G1 / path</span><span><i class="object"></i>Object</span><span><i class="ped"></i>Pedestrian</span><span><i class="goal"></i>Goal</span><span><i class="change"></i>Changed cell</span></div></article>
+  <article class="panel"><h2>SPATIAL MEMORY <small>Robot's recorded ternary map</small></h2><canvas id="memory" width="750" height="750" aria-label="Recorded spatial memory, known free, occupied and unknown cells"></canvas><div class="legend"><span><i class="unknown"></i>Unknown</span><span><i class="free"></i>Remembered free</span><span><i class="occupied"></i>Remembered occupied</span><span><i class="scan"></i>Paid scan cells</span></div></article></div>
+  <div class="step-stats"><div>STEP <b id="stepCount"></b></div><div>PAID SCANS <b id="scanCount"></b></div><span id="scanState"></span></div>
+  <div class="timeline"><button id="first" title="First step (LT)" aria-label="First step">LT |◀</button><button id="prev" aria-label="Previous step">◀</button><input id="slider" type="range" min="0" max="0" value="0" aria-label="Review step"><button id="next" aria-label="Next step">▶</button><button id="last" title="Last step (RT)" aria-label="Last step">▶| RT</button><button id="play" aria-label="Play or pause">▶ PLAY</button><label class="speed"><span>Speed</span><select id="speed" aria-label="Playback speed"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select></label></div>
+  <div class="details"><div><small>ENVIRONMENT EVENT</small><b id="eventType"></b><span id="eventDetail"></span></div><div><small>NAVIGATION ACTION</small><b id="action"></b><span id="safety"></span></div><div><small>MEMORY / CONTACTS</small><b id="memoryDetail"></b><span id="contactDetail"></span></div></div>
+  <div class="foot"><span>2D playback of original experiment data. Paid scans include the initial scan; independent safety scans are separate. Realized events can differ by model because they depend on robot state.</span><a id="original" target="_blank" rel="noopener">Original episode ↗</a></div>
+ </section>
+ <div class="controls">Keyboard: ← / → step · Home / End jump · Space play/pause | Xbox: D-pad / left stick step · LT / RT first/last · A play/pause · B back</div>
+</main><script src="./h2/replay-data.js?v=1"></script><script src="./h2/review.js?v=1"></script></body></html>
