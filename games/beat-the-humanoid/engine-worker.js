@@ -1,10 +1,10 @@
 const CDN='https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
-const files=['__init__','simulation','observation','scheduling','memory','navigation','evaluation','mujoco_navigation','mujoco_perception','emergency_safety','pedestrian_tracking'].map(n=>'spatial_memory/'+n+'.py').concat('browser_engine.py','mujoco.py');
+const files=['__init__','simulation','observation','scheduling','memory','navigation','evaluation','mujoco_navigation','mujoco_perception','emergency_safety','pedestrian_tracking'].map(n=>'spatial_memory/'+n+'.py').concat('browser_engine.py','mujoco.py','portrait_poses.py');
 const ready=(async()=>{
- importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=4');
+ importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=5');
  const p=await loadPyodide({indexURL:CDN});
  await p.loadPackage('numpy');p.FS.mkdirTree('/game/spatial_memory');
- await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file+'?v=4');if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
+ await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file+'?v=5');if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
  p.runPython("import sys; sys.path.insert(0, '/game'); from browser_engine import browser_episode");return p;
 })();
 let nativeReady;
@@ -22,16 +22,23 @@ async function prepareNative(p){
  return nativeReady;
 }
 ready.then(()=>postMessage({type:'ready'}),e=>postMessage({type:'error',error:String(e)}));
-self.onmessage=async({data})=>{
- const native=data.payload.backend==='mujoco-wasm';
+async function handle(data){
+ const portrait=data.payload.task==='portraits';
+ const native=portrait||data.payload.backend==='mujoco-wasm';
  try{
   const p=await ready;
-  if(native){postMessage({type:'progress',message:'MUJOCO WASM · LOADING G1 / CHECKING RAY API'});await prepareNative(p);postMessage({type:'progress',message:'MUJOCO WASM · COMPUTING G1 EPISODE'})}
-  const fn=p.globals.get('browser_episode');
+  if(native){if(!portrait)postMessage({type:'progress',message:'MUJOCO WASM · LOADING G1 / CHECKING RAY API'});await prepareNative(p);if(!portrait)postMessage({type:'progress',message:'MUJOCO WASM · COMPUTING G1 EPISODE'})}
+  if(portrait)p.runPython('from portrait_poses import portrait_bundle');
+  const fn=p.globals.get(portrait?'portrait_bundle':'browser_episode');
   try{
-   const value=JSON.parse(fn(JSON.stringify(data.payload)));
+   const value=JSON.parse(fn(portrait?data.payload.reaction:JSON.stringify(data.payload)));
    const transfer=[];
-   if(native&&data.payload.render_3d&&!value.renderError){
+   if(portrait&&data.payload.reaction==='normal'){
+    value.renderAssets=wasmBridge.renderAssets();
+    for(const mesh of value.renderAssets.meshes)transfer.push(mesh.positions.buffer,mesh.indices.buffer);
+    if(value.still.length!==value.renderAssets.poseLength||Object.values(value.clips).some(clip=>clip.length!==60||clip.some(f=>f.length!==value.renderAssets.poseLength)))throw Error('Portrait dimensions mismatch');
+   }
+   if(!portrait&&native&&data.payload.render_3d&&!value.renderError){
     try{
      value.renderAssets=wasmBridge.renderAssets();
      for(const mesh of value.renderAssets.meshes)transfer.push(mesh.positions.buffer,mesh.indices.buffer);
@@ -43,4 +50,6 @@ self.onmessage=async({data})=>{
   finally{fn.destroy()}
  }catch(e){postMessage({id:data.id,error:String(e)})}
  finally{if(native)wasmBridge.close()}
-};
+}
+// The bridge owns a single compiled scene. Portrait and game jobs must run serially.
+let queue=Promise.resolve();self.onmessage=({data})=>{queue=queue.then(()=>handle(data)).catch(error=>postMessage({id:data.id,error:String(error)}))};

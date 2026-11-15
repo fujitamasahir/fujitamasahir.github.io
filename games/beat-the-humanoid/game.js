@@ -172,15 +172,7 @@ window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if($('liveScre
 $('physicsBackend').addEventListener('change',()=>{$('render3d').disabled=$('physicsBackend').value!=='mujoco-wasm';$('backendNote').textContent=$('render3d').disabled?'Grid proxy · not MuJoCo physics':'G1 physics · optional 3D display'});
 (async()=>{try{const d=await api('/api/catalog');catalog=d.mazes;difficultyRules=d.difficulties;syncDifficulty();renderEditor();validate();gamepadLoop();playHeroMotion(strategy)}catch(e){toast(e.message);console.error(e)}})();
 
-const motionCache=new Map();let motionToken=0;
-function motionAsset(name,reaction=''){
- const key=name+'|'+reaction;
- if(!motionCache.has(key)){
-  const promise=new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('Motion image unavailable'));im.src='/api/portrait/'+name+'?motion=true'+(reaction?'&reaction='+encodeURIComponent(reaction):'')+'&v=14'});
-  motionCache.set(key,promise);promise.catch(()=>motionCache.delete(key));
- }
- return motionCache.get(key);
-}
+let motionToken=0;
 const HERO_NAMES=['periodic','age','uncertainty'];
 const heroCards=Array.from(document.querySelectorAll('.hero-card'));
 const strategyCards=HERO_NAMES.map(name=>document.querySelector('.strategy[data-strategy="'+name+'"]'));
@@ -228,7 +220,22 @@ function selectHero(name,direction=0){
  }
  requestAnimationFrame(turn);
 }
-async function playHeroMotion(name){stopHeroMotion();}
+async function playHeroMotion(name){
+ stopHeroMotion();
+ const token=motionToken;
+ if(!await portraitView.load()||token!==motionToken||strategy!==name||!$('setupScreen').classList.contains('active'))return;
+ const card=heroCards[HERO_NAMES.indexOf(name)],canvas=$('heroMotion');
+ card.appendChild(canvas);card.classList.add('motion-playing');canvas.hidden=false;
+ const start=performance.now();let last=-1;
+ function tick(now){
+  if(token!==motionToken)return;
+  if(!$('setupScreen').classList.contains('active')||strategy!==name||now-start>=3000){stopHeroMotion();return}
+  const index=Math.min(59,Math.floor((now-start)*20/1000));
+  if(index!==last){if(!portraitView.draw(name,index,canvas)){stopHeroMotion();return}last=index}
+  requestAnimationFrame(tick);
+ }
+ tick(start);
+}
 $('heroPrev').onclick=()=>cycleStrategy(-1);
 $('heroNext').onclick=()=>cycleStrategy(1);
 heroCards.forEach(card=>{
@@ -238,6 +245,10 @@ heroCards.forEach(card=>{
  card.onclick=()=>selectHero(card.dataset.character);
 });
 positionHeroRing(0);
+portraitView.load().then(ok=>{
+ if(!ok)return;
+ for(const card of heroCards){const still=portraitView.still(card.dataset.character);if(still)card.querySelector('img').src=still}
+});
 // Shared header: each letter follows a short staggered wave as the phrase swaps.
 const titlePhrases=()=>['BEAT THE HUMANOID','Stop the robot in '+(rules()?.step_limit||80)+' steps!'];
 let titleIndex=0;
@@ -301,7 +312,29 @@ function resultFrame(elapsed,human){
  const index=Math.max(0,Math.floor(elapsed*RESULT_FPS/1000));
  return human?(index<DEFEAT_DROP_FRAMES?index:DEFEAT_DROP_FRAMES+(index-DEFEAT_DROP_FRAMES)%DEFEAT_LOOP_FRAMES):Math.min(59,index);
 }
-function showResultReaction(name,human,celebrate=true){const token=++resultEffectToken,img=$('resultPortrait'),canvas=$('resultMotion');canvas.hidden=true;img.hidden=false;img.src='./portraits/'+name+'.svg';$('resultHero').classList.toggle('defeated',human);if(human&&celebrate)burstConfetti(token)}
+async function showResultReaction(name,human,celebrate=true){
+ const token=++resultEffectToken,img=$('resultPortrait'),canvas=$('resultMotion');
+ canvas.hidden=true;img.hidden=false;img.src=portraitView.still(name)||'./portraits/'+name+'.svg';
+ $('resultHero').classList.toggle('defeated',human);
+ if(human&&celebrate)burstConfetti(token);
+ if(!await portraitView.load()||token!==resultEffectToken||!$('resultScreen').classList.contains('active'))return;
+ img.src=portraitView.still(name)||img.src;
+ const loss=human?await portraitView.defeat():null;
+ if(token!==resultEffectToken||!$('resultScreen').classList.contains('active')||human&&!loss)return;
+ const start=performance.now();let last=-1;canvas.hidden=false;img.hidden=true;
+ function tick(now){
+  if(token!==resultEffectToken||!$('resultScreen').classList.contains('active'))return;
+  const elapsed=now-start;
+  if(!human&&elapsed>=3000){canvas.hidden=true;img.hidden=false;return}
+  const index=resultFrame(elapsed,human);
+  if(index!==last){
+   if(!portraitView.draw(name,index,canvas,loss)){canvas.hidden=true;img.hidden=false;return}
+   last=index;
+  }
+  requestAnimationFrame(tick);
+ }
+ tick(start);
+}
 function burstConfetti(token){
  const canvas=$('confetti'),ctx=canvas.getContext('2d'),width=canvas.width=innerWidth,height=canvas.height=innerHeight;
  const colors=['#ffd15d','#76e8ff','#ac80ff','#66f2ae','#ff7189','#fff'];

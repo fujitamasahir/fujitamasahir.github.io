@@ -2,21 +2,22 @@
 window.browserGame=(()=>{
  const difficulties={easy:{step_limit:80,max_static_objects:4,max_pedestrians:2,max_observations:20},medium:{step_limit:120,max_static_objects:2,max_pedestrians:1,max_observations:30},hard:{step_limit:160,max_static_objects:1,max_pedestrians:0,max_observations:40}};
  const catalog=fetch('./data/maze_catalog.json').then(async r=>{if(!r.ok)throw Error('Maze catalog unavailable');return (await r.json()).mazes});
- let worker,ready,job,seq=0,episode,pending,running=false,skip=false,generation=0,backend='grid2d-proxy',wants3d=false;
+ let worker,ready,seq=0,episode,pending,running=false,skip=false,generation=0,backend='grid2d-proxy',wants3d=false;
+ const jobs=new Map();
  const status=s=>document.getElementById('browserStatus').textContent=s;
  const label=()=>backend==='mujoco-wasm'?'MUJOCO WASM · EXPERIMENTAL':'2D BROWSER PROTOTYPE';
  const note=()=>{document.getElementById('backendNote').textContent=backend==='mujoco-wasm'?(wants3d?'G1 physics · 3D replay':'G1 physics · 2D display'):'Grid proxy · not MuJoCo physics'};
  function warm(){
   if(ready)return ready;
   ready=new Promise((resolve,reject)=>{
-   worker=new Worker('./engine-worker.js?v=4');
+   worker=new Worker('./engine-worker.js?v=5');
    worker.onmessage=({data})=>{
     if(data.type==='ready'){resolve();if(!running)status(label()+' · READY');return}
     if(data.type==='progress'){status(data.message);return}
     if(data.type==='error'){reject(Error(data.error));status('ENGINE LOAD FAILED · RELOAD');return}
-    if(job&&data.id===job.id){const j=job;job=null;data.error?j.reject(Error(data.error)):j.resolve(data.value)}
+    if(jobs.has(data.id)){const j=jobs.get(data.id);jobs.delete(data.id);data.error?j.reject(Error(data.error)):j.resolve(data.value)}
    };
-   worker.onerror=e=>{const err=Error(e.message||'Engine error');reject(err);if(job){job.reject(err);job=null}status('ENGINE LOAD FAILED · RELOAD')};
+   worker.onerror=e=>{const err=Error(e.message||'Engine error');reject(err);for(const j of jobs.values())j.reject(err);jobs.clear();status('ENGINE LOAD FAILED · RELOAD')};
   });ready.catch(()=>{});return ready;
  }
  const key=c=>c.join(',');
@@ -33,7 +34,8 @@ window.browserGame=(()=>{
   if(!visited.has(goal))errors.push('This layout blocks every grid route.');
   return {valid:!errors.length,errors}
  }
- function calculate(payload){return warm().then(()=>new Promise((resolve,reject)=>{job={id:++seq,resolve,reject};worker.postMessage({id:seq,payload})}))}
+ function calculate(payload){return warm().then(()=>new Promise((resolve,reject)=>{const id=++seq;jobs.set(id,{resolve,reject});try{worker.postMessage({id,payload})}catch(e){jobs.delete(id);reject(e)}}))}
+ function portraits(reaction='normal'){return calculate({task:'portraits',reaction})}
  async function api(url,options={}){
   const mazes=await catalog;
   if(url==='/api/catalog'){warm();return {mazes,difficulties}}
@@ -58,5 +60,5 @@ window.browserGame=(()=>{
    episode=data;running=false;status(label()+' · READY');onFrame({...data.frames.at(-1),status:'finished',result:data.result});
   }catch(e){running=false;status(label()+' · ERROR: '+e.message);onError(e)}
  }
- return {api,play,validate}
+ return {api,play,validate,portraits}
 })();

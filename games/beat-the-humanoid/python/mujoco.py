@@ -10,6 +10,12 @@ _values=json.loads(_bridge.constants())
 mjtObj=SimpleNamespace(**_values['obj'])
 mjtGeom=SimpleNamespace(**_values['geom'])
 
+class _MeshVertices:
+    def __getitem__(self,key):
+        if not isinstance(key,slice) or key.step not in (None,1):
+            raise ValueError('Mesh vertices require a contiguous slice')
+        return np.asarray(json.loads(_bridge.meshVertices(int(key.start),int(key.stop))),dtype=float).reshape(-1,3)
+
 class MjModel:
     @classmethod
     def from_xml_string(cls, xml):
@@ -18,6 +24,8 @@ class MjModel:
         for name,value in info.items():
             setattr(model,name,np.asarray(value) if isinstance(value,list) else value)
         model.geom_size=model.geom_size.reshape(-1,3)
+        model.jnt_range=model.jnt_range.reshape(-1,2)
+        model.mesh_vert=_MeshVertices()
         model.opt=SimpleNamespace(timestep=0.02)  # Actual timestep is set in MJCF.
         return model
 
@@ -36,6 +44,10 @@ class MjData:
     def geom_xpos(self): return self._read('geom_xpos',3)
     @property
     def geom_xmat(self): return self._read('geom_xmat',9)
+    @property
+    def xpos(self): return self._read('xpos',3)
+    @property
+    def xmat(self): return self._read('xmat',9)
     @property
     def site_xpos(self): return self._read('site_xpos',3)
     @property
@@ -82,3 +94,15 @@ def mj_multiRay(model,data,origin,directions,groups,flg_static,bodyexclude,geomi
     result=_rays(origin,directions,groups,flg_static,bodyexclude,True,cutoff)
     geomid[:]=result['ids']
     distances[:]=result['dist']
+
+
+def mj_jac(model,data,jacp,jacr,point,body):
+    a,b=json.loads(_bridge.jac(json.dumps(np.asarray(point).tolist()),int(body)))
+    jacp[:]=np.asarray(a).reshape(jacp.shape)
+    jacr[:]=np.asarray(b).reshape(jacr.shape)
+
+def mju_mat2Quat(quat,mat):
+    quat[:]=json.loads(_bridge.matToQuat(json.dumps(np.asarray(mat).tolist())))
+
+def mju_quat2Vel(angular,quat,dt):
+    angular[:]=json.loads(_bridge.quatToVel(json.dumps(np.asarray(quat).tolist()),float(dt)))

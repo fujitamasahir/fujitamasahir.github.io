@@ -117,3 +117,6 @@ body:is([data-difficulty=medium],[data-difficulty=hard]) :is(#liveDifficulty,#re
 .backend-choice{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#a8bbd0;white-space:nowrap}.backend-choice select{background:#111d2b;color:#e6f2ff;border:1px solid #4a647c;border-radius:6px;padding:8px;font:bold 12px system-ui;cursor:pointer}.backend-choice select:focus-visible{outline:2px solid #53dcea}#browserStatus{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
 
 .map-card .g1-three-view{display:block;flex:1;min-height:0;width:100%;height:0;object-fit:fill;background:#101a26;border-radius:6px}.map-card .g1-three-view[hidden]{display:none!important}.view-toggle{white-space:nowrap}.view-toggle:has(input:disabled){opacity:.45}
+
+/* The canvas follows the selected character card, while still images retain their original bob. */
+.hero-card.motion-playing #heroMotion{display:block;animation:none}.result-hero #resultMotion:not([hidden]){animation:none}.result-hero.defeated #resultMotion{filter:none}

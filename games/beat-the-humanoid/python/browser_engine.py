@@ -152,8 +152,9 @@ def wasm_episode(request_json):
     from js import wasmBridge
     render_3d=bool(q.get('render_3d',False))
     render_failure=None
+    walk_phase=0
     def capture(world,frame):
-        nonlocal render_failure
+        nonlocal render_failure, walk_phase
         extra=scene.update(world,frame)
         contacts={k:int(extra.get(k,0)) for k in ('g1_pedestrian_contact_pairs','g1_wall_contact_pairs',
             'g1_persistent_obstacle_contact_pairs','g1_unwanted_floor_contact_pairs','g1_self_contact_pairs')}
@@ -171,7 +172,10 @@ def wasm_episode(request_json):
             step_limit=rules['step_limit'],max_observations=rules['max_observations'],backend='mujoco-wasm'))
         if render_3d and render_failure is None:
             try:
-                history[-1]['render_pose']=json.loads(wasmBridge.renderPose())
+                moved=bool(frame.get('moved',False))
+                if moved:
+                    walk_phase+=1
+                history[-1]['render_pose']=json.loads(wasmBridge.walkPose(walk_phase,moved))
             except Exception as error:
                 render_failure=str(error)
         return extra

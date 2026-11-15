@@ -45,12 +45,12 @@
    const local=xml.replace(/meshdir="[^"]*"/,'meshdir="assets"');
    model=mj.from_xml_string(local,vfs);data=new mj.MjData(model);
   }catch(e){close();throw e}finally{vfs.delete()}
-  const fields=['jnt_qposadr','jnt_dofadr','body_mocapid','body_parentid','geom_bodyid','geom_contype','geom_type','geom_size','geom_rbound'];
-  const info={ngeom:model.ngeom};
+  const fields=['jnt_qposadr','jnt_dofadr','body_mocapid','body_parentid','geom_bodyid','geom_contype','geom_type','geom_size','geom_rbound','geom_group','geom_dataid','jnt_limited','jnt_range','mesh_vertadr','mesh_vertnum'];
+  const info={ngeom:model.ngeom,njnt:model.njnt,nv:model.nv};
   for(const f of fields)info[f]=arr(model[f]);
   return toJson(info);
  }
- function constants(){const obj={},geom={};for(const n of ['BODY','JOINT','KEY','GEOM','SITE'])obj['mjOBJ_'+n]=numeric(mj.mjtObj['mjOBJ_'+n]);for(const n of ['BOX','SPHERE','CAPSULE','CYLINDER','ELLIPSOID'])geom['mjGEOM_'+n]=numeric(mj.mjtGeom['mjGEOM_'+n]);return toJson({obj,geom})}
+ function constants(){const obj={},geom={};for(const n of ['BODY','JOINT','KEY','GEOM','SITE','MESH'])obj['mjOBJ_'+n]=numeric(mj.mjtObj['mjOBJ_'+n]);for(const n of ['BOX','SPHERE','CAPSULE','CYLINDER','ELLIPSOID','MESH'])geom['mjGEOM_'+n]=numeric(mj.mjtGeom['mjGEOM_'+n]);return toJson({obj,geom})}
  function reset(key){check();mj.mj_resetDataKeyframe(model,data,key);return toJson({qpos:arr(data.qpos),qvel:arr(data.qvel),mocap_pos:arr(data.mocap_pos)})}
  function forward(payload){check();const p=fromJson(payload);data.qpos.set(p.qpos);data.qvel.set(p.qvel);data.mocap_pos.set(p.mocap_pos);mj.mj_forward(model,data)}
  function field(name){check();return toJson(arr(data[name]))}
@@ -70,14 +70,14 @@
  // Presentation-only snapshots from the compiled model. No mj_forward or physics calls here.
  let drawingIds=[];
  function drawingGeoms(){
-  check();const out=[],meshType=numeric(mj.mjtGeom.mjGEOM_MESH),boxType=numeric(mj.mjtGeom.mjGEOM_BOX),capType=numeric(mj.mjtGeom.mjGEOM_CAPSULE);
+  check();const out=[],meshType=numeric(mj.mjtGeom.mjGEOM_MESH),boxType=numeric(mj.mjtGeom.mjGEOM_BOX),capType=numeric(mj.mjtGeom.mjGEOM_CAPSULE),ellipsoidType=numeric(mj.mjtGeom.mjGEOM_ELLIPSOID);
   for(let i=0;i<model.ngeom;i++){
    const group=model.geom_group[i],type=model.geom_type[i];
-   if(group===2&&type===meshType||group===5&&(type===boxType||type===capType))out.push(i);
+   if(group===2&&(type===meshType||type===ellipsoidType)||group===5&&(type===boxType||type===capType))out.push(i);
   }
   return out;
  }
- function poseFor(id){return [...data.geom_xpos.slice(id*3,id*3+3),...data.geom_xmat.slice(id*9,id*9+9)]}
+ function poseFor(id,source=data){return [...source.geom_xpos.slice(id*3,id*3+3),...source.geom_xmat.slice(id*9,id*9+9)]}
  function renderPose(){
   check();
   if(!drawingIds.length)drawingIds=drawingGeoms().filter(i=>model.geom_bodyid[i]!==0);
@@ -86,12 +86,13 @@
  function renderAssets(){
   check();const ids=drawingGeoms(),meshes=[],meshIndex=new Map(),geoms=[];
   drawingIds=ids.filter(i=>model.geom_bodyid[i]!==0);
-  const meshType=numeric(mj.mjtGeom.mjGEOM_MESH),boxType=numeric(mj.mjtGeom.mjGEOM_BOX);
+  const meshType=numeric(mj.mjtGeom.mjGEOM_MESH),boxType=numeric(mj.mjtGeom.mjGEOM_BOX),ellipsoidType=numeric(mj.mjtGeom.mjGEOM_ELLIPSOID);
+  const handNames=new Map();for(const side of ['left','right'])for(const kind of ['open','fist']){const name=side+'_'+kind+'_showcase',id=mj.mj_name2id(model,numeric(mj.mjtObj.mjOBJ_GEOM),name);if(id>=0)handNames.set(id,kind)}
   for(const id of ids){
    const type=model.geom_type[id],mid=model.geom_dataid[id],mat=model.geom_matid[id],group=model.geom_group[id];
    const moving=model.geom_bodyid[id]!==0;
    const rgba=arr(mat>=0?model.mat_rgba.slice(mat*4,mat*4+4):model.geom_rgba.slice(id*4,id*4+4));
-   const g={id,kind:type===meshType?'mesh':type===boxType?'box':'capsule',group,rgba,size:arr(model.geom_size.slice(id*3,id*3+3)),moving,poseIndex:moving?drawingIds.indexOf(id):-1,pose:moving?null:poseFor(id)};
+   const g={id,kind:type===meshType?'mesh':type===boxType?'box':type===ellipsoidType?'ellipsoid':'capsule',hand:handNames.get(id)||null,group,rgba,size:arr(model.geom_size.slice(id*3,id*3+3)),moving,poseIndex:moving?drawingIds.indexOf(id):-1,pose:moving?null:poseFor(id)};
    if(g.kind==='mesh'){
     if(!meshIndex.has(mid)){
      const va=model.mesh_vertadr[mid],vn=model.mesh_vertnum[mid],fa=model.mesh_faceadr[mid],fn=model.mesh_facenum[mid];
@@ -107,6 +108,29 @@
   if(!meshes.length||!drawingIds.length)throw Error('No G1 visual geometry');
   return {meshes,geoms,poseLength:drawingIds.length*12};
  }
- self.wasmBridge={prepare,create,constants,reset,forward,field,contacts,rays,close,renderPose,renderAssets,
+ // A separate MjData is used exclusively for walking presentation. Never modify evaluator data.
+ function walkPose(phase,moved){
+  check();if(!moved)return renderPose();
+  if(!drawingIds.length)drawingIds=drawingGeoms().filter(i=>model.geom_bodyid[i]!==0);
+  const visual=new mj.MjData(model);
+  try{
+   visual.qpos.set(data.qpos);visual.qvel.set(data.qvel);visual.mocap_pos.set(data.mocap_pos);visual.mocap_quat.set(data.mocap_quat);
+   for(const [side,sign] of [['left',1],['right',-1]])for(const [joint,a] of [['hip_pitch',.18],['knee',.10],['shoulder_pitch',-.15]]){
+    const id=mj.mj_name2id(model,numeric(mj.mjtObj.mjOBJ_JOINT),side+'_'+joint+'_joint');
+    if(id>=0)visual.qpos[model.jnt_qposadr[id]]+=sign*a*Math.sin(phase*1.7);
+   }
+   mj.mj_forward(model,visual);
+   return toJson(drawingIds.flatMap(id=>poseFor(id,visual)));
+  }finally{visual.delete()}
+ }
+ function meshVertices(start,end){check();return toJson(arr(model.mesh_vert.slice(start*3,end*3)))}
+ function jac(point,body){
+  const a=new mj.DoubleBuffer(3*model.nv),b=new mj.DoubleBuffer(3*model.nv);
+  try{mj.mj_jac(model,data,a,b,fromJson(point),body);return toJson([arr(view(a)),arr(view(b))])}
+  finally{a.delete();b.delete()}
+ }
+ function matToQuat(values){const a=new mj.DoubleBuffer(4);try{mj.mju_mat2Quat(a,fromJson(values));return toJson(arr(view(a)))}finally{a.delete()}}
+ function quatToVel(values,dt){const a=new mj.DoubleBuffer(3);try{mj.mju_quat2Vel(a,fromJson(values),dt);return toJson(arr(view(a)))}finally{a.delete()}}
+ self.wasmBridge={prepare,create,constants,reset,forward,field,contacts,rays,close,renderPose,renderAssets,walkPose,meshVertices,jac,matToQuat,quatToVel,
    name2id:(type,name)=>mj.mj_name2id(model,type,name),id2name:(type,id)=>mj.mj_id2name(model,type,id)};
 })();
