@@ -25,6 +25,8 @@ function revealIn(container,element){
 }
 function refreshSelection(){
  const model=index.arms[modelIndex],map=index.maps[mazeIndex];
+ $('modelDescriptionName').textContent=(modelIndex+1)+'. '+model.label;
+ $('modelDescription').textContent=model.description;
  Array.from($('modelRows').children).forEach((r,i)=>{r.classList.toggle('selected',i===modelIndex);r.querySelector('button').setAttribute('aria-pressed',String(i===modelIndex))});
  revealIn($('modelScroll'),$('modelRows').children[modelIndex]);
  $('mazeLabel').textContent='MAZE '+String(map.number).padStart(2,'0')+' · '+map.family+' / '+H2Replay.schedules[scheduleIndex].label;
@@ -44,13 +46,13 @@ function refreshSelection(){
  $('nextFailure').disabled=failures===0;
  revealIn($('matrixScroll'),$('mazeRows').children[mazeIndex]);
 }
-function select(m,s,n){if(!index)return;const a=wrap(m,index.arms.length),b=wrap(s,4),c=wrap(n,index.maps.length);if(a===modelIndex&&b===scheduleIndex&&c===mazeIndex&&record)return;modelIndex=a;scheduleIndex=b;mazeIndex=c;refreshSelection();loadSelection()}
+function select(m,s,n){if(!index)return;const a=wrap(m,index.arms.length),b=wrap(s,H2Replay.schedules.length),c=wrap(n,index.maps.length);if(a===modelIndex&&b===scheduleIndex&&c===mazeIndex&&record)return;modelIndex=a;scheduleIndex=b;mazeIndex=c;refreshSelection();loadSelection()}
 function nextFailure(){
- if(!index)return;const start=mazeIndex*4+scheduleIndex;
- for(let d=1;d<=index.maps.length*4;d++){const k=wrap(start+d,index.maps.length*4),n=Math.floor(k/4),s=k%4;if(!H2Replay.getEntry(index,index.maps[n].number,s,index.arms[modelIndex].id).success){select(modelIndex,s,n);return}}
+ if(!index)return;const columns=H2Replay.schedules.length,start=mazeIndex*columns+scheduleIndex;
+ for(let d=1;d<=index.maps.length*columns;d++){const k=wrap(start+d,index.maps.length*columns),n=Math.floor(k/columns),s=k%columns;if(!H2Replay.getEntry(index,index.maps[n].number,s,index.arms[modelIndex].id).success){select(modelIndex,s,n);return}}
 }
 function buildControls(){
- for(const [i,m] of index.arms.entries()){const r=document.createElement('tr'),td=rowCell(r,'th','');td.append(tableButton(m.label,()=>select(i,scheduleIndex,mazeIndex)));rowCell(r,'td',String(m.goals.original));rowCell(r,'td',String(m.goals.high_frequency));$('modelRows').append(r)}
+ for(const [i,m] of index.arms.entries()){const r=document.createElement('tr');rowCell(r,'td',String(i+1)).className='model-number';const td=rowCell(r,'th','');td.append(tableButton(m.label,()=>select(i,scheduleIndex,mazeIndex)));rowCell(r,'td',String(m.goals.known));rowCell(r,'td',String(m.goals.original));rowCell(r,'td',String(m.goals.high_frequency));$('modelRows').append(r)}
  $('selection').hidden=false;refreshSelection()
 }
 async function loadSelection(){
@@ -68,7 +70,7 @@ async function loadSelection(){
   $('outcome').textContent=e.success?'GOAL REACHED':'NOT REACHED';$('outcome').className=e.success?'success':'fail';
   $('finalSteps').textContent=data.metrics.steps+' / '+e.stepLimit;$('finalScans').textContent=data.metrics.paidScans+' / '+e.scanLimit;
   $('contactWarning').hidden=data.metrics.unwantedContacts===0;$('contactWarning').textContent='WARNING · UNWANTED CONTACTS ('+data.metrics.unwantedContacts+')';
-  $('archiveNote').hidden=!data.legacy;$('archiveNote').textContent='Historical trace: robot trajectory and scans are recorded. Objects and pedestrians are shown from the saved environment schedule; spatial memory was not recorded.';
+  $('archiveNote').hidden=e.parity!=='FIRST_TIME_FIT72_EVALUATION';$('archiveNote').textContent='Known FIT72: first-time evaluation (no prior identity-matched result).';
   $('original').href=H2Replay.originalURL(e);$('slider').max=String(record.frames.length-1);render(0);
  }catch(error){if(id===serial&&error.name!=='AbortError'){$('outcome').textContent='UNAVAILABLE';showStatus(error.message,true,loadSelection)}}
 }
@@ -180,7 +182,7 @@ function gamepad(now){
 async function initialize(){try{
  showStatus('LOADING EXPERIMENT INDEX…');index=await H2Replay.loadIndex();
  const p=new URLSearchParams(location.search),m=index.arms.findIndex(a=>a.id===p.get('model')),n=index.maps.findIndex(a=>String(a.number)===p.get('map'));
- modelIndex=m<0?0:m;mazeIndex=n<0?0:n;const s=H2Replay.schedules.findIndex(a=>a.condition===(p.get('condition')||'high_frequency')&&String(a.number)===p.get('schedule'));scheduleIndex=s<0?0:s;
+ modelIndex=m<0?0:m;mazeIndex=n<0?0:n;const s=H2Replay.schedules.findIndex(a=>a.condition===(p.get('condition')||'high_frequency')&&String(a.number)===p.get('schedule'));scheduleIndex=s<0?2:s;
  buildControls();await loadSelection()
  }catch(error){showStatus(error.message,true,()=>location.reload())}}
  requestAnimationFrame(gamepad);initialize();

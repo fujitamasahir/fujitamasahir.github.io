@@ -10,13 +10,13 @@ button:hover:not(:disabled){border-color:var(--cyan)}button:disabled{opacity:.45
 header button.back,header button.research{display:inline-flex;align-items:center;gap:5px;justify-self:start;font-size:11px;letter-spacing:.03em}header button.research{justify-self:end}
 kbd{font-family:inherit;display:inline-grid;place-items:center;border-radius:50%;width:21px;height:21px;font-size:12px;font-weight:900;color:white;background:#405c71;vertical-align:middle;margin-right:3px}kbd.b{background:#b83242}kbd.x{background:#2168bb}kbd.y{background:#e7b83e;color:#202020}
 main{width:100%;max-width:1480px;margin:auto;padding:8px 16px;display:flex;flex-direction:column;gap:8px}
-.selection{display:grid;grid-template-columns:minmax(300px,420px) minmax(245px,320px) minmax(175px,250px);justify-content:center;gap:8px;min-width:0}
+.selection{display:grid;grid-template-columns:minmax(165px,220px) minmax(355px,440px) minmax(310px,395px) minmax(155px,210px);justify-content:center;gap:8px;min-width:0}
 .model-panel,.case-panel{min-width:0;min-height:0;display:flex;flex-direction:column;padding:7px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}
 .section-heading{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px;flex:none}
 .section-heading h2{margin:0;font-size:12px;letter-spacing:.04em;white-space:nowrap}.section-heading button{font-size:10px;padding:3px 6px}
 .model-scroll,.matrix-scroll{overflow:auto;min-height:0;max-height:220px;scrollbar-color:#48647b #111b28;flex:1}
 .model-table,.matrix{border-collapse:separate;border-spacing:0;width:100%;table-layout:fixed;text-align:center;font-size:12px;font-variant-numeric:tabular-nums}
-.model-name-col{width:56%}.maze-name-col{width:23%}
+.model-number-col{width:8%}.model-name-col{width:49%}.maze-name-col{width:20%}.model-number{color:var(--muted);font-size:11px}.model-table tr.selected .model-number{color:var(--cyan)}
 .model-table th,.model-table td,.matrix th,.matrix td{border-bottom:1px solid #263749;padding:2px 4px}
 .model-table thead,.matrix thead{position:sticky;top:0;z-index:2;background:#192838;color:var(--muted);font-size:10px;line-height:1.1}
 .model-table thead th,.matrix thead th{padding:4px 2px;background:#192838}
@@ -46,7 +46,7 @@ main{width:100%;max-width:1480px;margin:auto;padding:8px 16px;display:flex;flex-
 .foot{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:3px 10px;color:var(--muted);font-size:10px;line-height:1.25}.foot a{white-space:nowrap}.archive-note{color:var(--gold);font-size:10px;margin:0;flex-basis:100%}
 .contact-warning{background:#401b23;border:1px solid #ff7771;color:#ffb4af;padding:7px;text-align:center;font-weight:900;border-radius:5px;font-size:11px}.failure-color{color:#ff8d88!important}
 .controls{text-align:center;font-size:10px;color:var(--muted);line-height:1.35;flex:none}[hidden]{display:none!important}
-@media(min-width:900px) and (min-height:560px){
+@media(min-width:1080px) and (min-height:560px){
  /* Explicit dimensions prevent intrinsic table heights from consuming the viewport.
     Keep page overflow available as a fallback for browser zoom and smaller windows. */
  body{--selection-height:clamp(164px,24vh,220px);--map-size:clamp(185px,calc(100vh - var(--selection-height) - 270px),570px);height:auto;min-height:100vh;display:block;overflow-y:auto}
@@ -62,7 +62,7 @@ main{width:100%;max-width:1480px;margin:auto;padding:8px 16px;display:flex;flex-
  .panel canvas{width:min(100%,var(--map-size));height:auto;max-width:100%;max-height:100%;object-fit:contain}
  @supports(width:1cqh){.panel canvas{width:min(100cqw,100cqh,var(--map-size));height:auto}}
 }
-@media(max-width:899px),(max-height:559px){
+@media(max-width:1079px),(max-height:559px){
  main{padding:9px;gap:9px}.selection{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
  .summary-panel{grid-column:1/-1}.stats{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.model-scroll,.matrix-scroll{max-height:195px}
  .review-layout{grid-template-columns:1fr}.review{grid-template-rows:auto auto auto auto}.details{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:none}.detail-column{overflow:visible}
@@ -71,3 +71,14 @@ main{width:100%;max-width:1480px;margin:auto;padding:8px 16px;display:flex;flex-
  header{grid-template-columns:auto 1fr auto;padding:8px 6px;gap:6px}.eyebrow{display:none}header button.back,header button.research{font-size:9px;padding:4px}h1{font-size:16px}
  .selection{grid-template-columns:1fr}.summary-panel{grid-column:auto}.section-heading h2{font-size:12px}.maps{gap:5px}.panel{padding:4px}.panel h2{font-size:10px}.panel h2 small{display:none}.legend{font-size:9px;gap:3px 5px}.timeline{flex-wrap:wrap}.timeline button{padding:5px;font-size:10px}.details{grid-template-columns:1fr}.controls{font-size:9px}
 }
+
+/* Selected-model context stays bounded by the selection row. */
+.model-description{min-width:0;min-height:0;overflow:auto;scrollbar-color:#48647b #111b28;padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}
+.model-description small{display:block;color:var(--muted);font-size:10px;letter-spacing:.07em;font-weight:800}
+.model-description h3{margin:7px 0;color:var(--cyan);font-size:14px;line-height:1.2;overflow-wrap:anywhere}
+.model-description p{margin:0;color:#d3e1ee;font-size:12px;line-height:1.4;overflow-wrap:anywhere}
+.case-panel .section-heading{flex-wrap:wrap;gap:3px}.case-panel .section-heading h2{font-size:11px;white-space:normal}.case-panel .section-heading button{font-size:9px}
+.model-table tbody button{font-size:11px;white-space:normal;overflow-wrap:anywhere}
+@media(min-width:1080px) and (min-height:560px){.model-description{max-height:100%}.selection{grid-template-columns:minmax(155px,1fr) minmax(340px,2.15fr) minmax(300px,1.8fr) minmax(150px,1fr)}}
+@media(max-width:1079px),(max-height:559px){.model-description{grid-column:1/-1;max-height:145px}.model-description h3{font-size:13px}.model-description p{font-size:12px}}
+@media(max-width:600px){.model-description{grid-column:auto}.model-table tbody button{font-size:10px}.model-table thead,.matrix thead{font-size:9px}}
