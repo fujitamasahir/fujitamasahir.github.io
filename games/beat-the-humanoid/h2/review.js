@@ -1,39 +1,72 @@
-/* Viewer for the archived H2 high-frequency experiment; all displayed states are recorded. */
+/* H2 archive UI: independent selections, no simulator or generated memory. */
 'use strict';
 const $=id=>document.getElementById(id);
-let index,entry,record,cursor=0,playing=false,timer=null,serial=0,download=null;
-const cache=new Map();
-const selectIds=['map','schedule','model'];
-const eventLabels={initial_state:'INITIAL STATE',addition:'OBJECT APPEARED',relocation:'OBJECT MOVED',removal:'OBJECT DISAPPEARED'};
+let index,entry,record,cursor=0,playing=false,timer=null,serial=0,download=null,modelIndex=0,scheduleIndex=0,mazeIndex=0,speedIndex=1,retry=null;
+const speeds=[.5,1,2,4],cache=new Map();
+const eventLabels={initial_state:'INITIAL STATE',addition:'OBJECT APPEARED',relocation:'OBJECT MOVED',removal:'OBJECT DISAPPEARED',no_op:'NO CHANGE',no_change_in_saved_schedule:'NO CHANGE',saved_schedule_changes:'SAVED SCHEDULE CHANGE'};
 const coords=c=>Array.isArray(c)?'('+c.join(', ')+')':'—';
 const labels={move:'FORWARD / MOVE',sidestep:'SIDESTEP',retreat:'RETREAT',turn:'TURN',wait:'WAIT'};
-function options(id,rows){const el=$(id);el.replaceChildren();for(const [value,label] of rows){const option=document.createElement('option');option.value=value;option.textContent=label;el.append(option)}}
-function showStatus(message,error=false,retry=false){const el=$('status');el.hidden=false;el.classList.toggle('error',error);el.replaceChildren(document.createTextNode(message));if(retry){const b=document.createElement('button');b.textContent='RETRY';b.onclick=loadSelection;el.append(b)}}
-function pause(){playing=false;clearTimeout(timer);timer=null;$('play').textContent='▶ PLAY';$('play').setAttribute('aria-pressed','false')}
-function selectEntry(){return H2Replay.getEntry(index,$('map').value,$('schedule').value,$('model').value)}
+const wrap=(i,n)=>(i%n+n)%n;
+const choice=()=>H2Replay.getEntry(index,index.maps[mazeIndex].number,scheduleIndex,index.arms[modelIndex].id);
+function showStatus(message,error=false,retryAction=null){retry=retryAction;const el=$('status');el.hidden=false;el.classList.toggle('error',error);el.replaceChildren(document.createTextNode(message));if(retry){const b=document.createElement('button');b.textContent='A · RETRY';b.onclick=retry;el.append(b)}}
+function pause(){playing=false;clearTimeout(timer);timer=null;$('play').textContent='A · ▶ PLAY';$('play').setAttribute('aria-pressed','false')}
+function rowCell(row,tag,value){const el=document.createElement(tag);el.textContent=value;row.append(el);return el}
+function tableButton(label,callback){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=callback;return b}
+function revealIn(container,element){if(!element)return;const c=container.getBoundingClientRect(),e=element.getBoundingClientRect();if(e.top<c.top)container.scrollTop+=e.top-c.top;else if(e.bottom>c.bottom)container.scrollTop+=e.bottom-c.bottom}
+function refreshSelection(){
+ const model=index.arms[modelIndex],map=index.maps[mazeIndex];
+ Array.from($('modelRows').children).forEach((r,i)=>{r.classList.toggle('selected',i===modelIndex);r.querySelector('button').setAttribute('aria-pressed',String(i===modelIndex))});
+ revealIn($('modelScroll'),$('modelRows').children[modelIndex]);
+ Array.from($('scheduleChoices').children).forEach((b,i)=>{b.classList.toggle('selected',i===scheduleIndex);b.setAttribute('aria-pressed',String(i===scheduleIndex))});
+ $('mazeLabel').textContent=String(map.number).padStart(2,'0')+' · '+map.family;
+ $('mazeRows').replaceChildren();
+ let failures=0;
+ for(const [i,m] of index.maps.entries()){
+  const row=document.createElement('tr');row.classList.toggle('current-maze',i===mazeIndex);
+  const head=rowCell(row,'th','');head.append(tableButton(String(m.number).padStart(2,'0')+' · '+m.family,()=>select(modelIndex,scheduleIndex,i)));
+  for(const [j,s] of H2Replay.schedules.entries()){
+   const e=H2Replay.getEntry(index,m.number,j,model.id);if(!e.success)failures++;
+   const td=rowCell(row,'td',''),b=tableButton(e.success?'✓':'✕',()=>select(modelIndex,j,i));
+   b.className=(e.success?'case-success':'case-fail')+(i===mazeIndex&&j===scheduleIndex?' active-case':'');
+   b.setAttribute('aria-label','Maze '+m.number+' '+s.label+' '+(e.success?'goal reached':'failed'));
+   b.setAttribute('aria-pressed',String(i===mazeIndex&&j===scheduleIndex));td.append(b)
+  }$('mazeRows').append(row)
+ }
+ $('nextFailure').disabled=failures===0;
+ revealIn($('mazeRows').closest('.matrix-scroll'),$('mazeRows').children[mazeIndex]);
+}
+function select(m,s,n){if(!index)return;const a=wrap(m,index.arms.length),b=wrap(s,4),c=wrap(n,index.maps.length);if(a===modelIndex&&b===scheduleIndex&&c===mazeIndex&&record)return;modelIndex=a;scheduleIndex=b;mazeIndex=c;refreshSelection();loadSelection()}
+function nextFailure(){
+ if(!index)return;const start=mazeIndex*4+scheduleIndex;
+ for(let d=1;d<=index.maps.length*4;d++){const k=wrap(start+d,index.maps.length*4),n=Math.floor(k/4),s=k%4;if(!H2Replay.getEntry(index,index.maps[n].number,s,index.arms[modelIndex].id).success){select(modelIndex,s,n);return}}
+}
+function buildControls(){
+ for(const [i,m] of index.arms.entries()){const r=document.createElement('tr'),td=rowCell(r,'th','');td.append(tableButton(m.label,()=>select(i,scheduleIndex,mazeIndex)));rowCell(r,'td',m.goals.original+' / 72');rowCell(r,'td',m.goals.high_frequency+' / 72');$('modelRows').append(r)}
+ H2Replay.schedules.forEach((s,i)=>$('scheduleChoices').append(tableButton(s.label,()=>select(modelIndex,i,mazeIndex))));
+ $('selection').hidden=false;refreshSelection()
+}
 async function loadSelection(){
  if(!index)return;
- const id=++serial;download?.abort();download=new AbortController();pause();record=null;
- $('review').hidden=true;$('verified').hidden=true;
- entry=selectEntry();const e=entry;
- $('modelGoals').textContent=e.model.goals+' / '+e.model.episodes;
- const params=new URLSearchParams({map:String(e.map.number),schedule:String(e.schedule),model:e.model.id});history.replaceState(null,'','?'+params.toString());
+ const id=++serial;download?.abort();download=new AbortController();pause();record=null;retry=null;$('review').hidden=true;
+ entry=choice();const e=entry;
+ const params=new URLSearchParams({model:e.model.id,condition:e.condition,schedule:String(e.schedule),map:String(e.map.number)});history.replaceState(null,'','?'+params.toString());
  showStatus('LOADING RECORDED EPISODE…');
  try{
-  let data=cache.get(e.filename);
-  if(!data){data=await H2Replay.loadReplay(index,e,download.signal);if(id!==serial)return;cache.set(e.filename,data);if(cache.size>5)cache.delete(cache.keys().next().value)}
+  let data=cache.get(e.path);
+  if(!data){data=await H2Replay.loadReplay(index,e,download.signal);if(id!==serial)return;cache.set(e.path,data);if(cache.size>5)cache.delete(cache.keys().next().value)}
   if(id!==serial)return;
-  record=data;cursor=0;$('verified').hidden=false;$('status').hidden=true;$('review').hidden=false;
+  record=data;cursor=0;retry=null;$('status').hidden=true;$('review').hidden=false;
   $('outcome').textContent=e.success?'GOAL REACHED':'NOT REACHED';$('outcome').className=e.success?'success':'fail';
-  $('finalSteps').textContent=e.steps+' / '+e.stepLimit;$('finalScans').textContent=e.paidScans+' / '+e.scanLimit;
-  $('distance').textContent=e.distanceM.toFixed(2)+' m';$('contacts').textContent=e.unwantedContacts;
-  $('original').href='https://github.com/'+index.sourceRepo+'/blob/'+index.sourceCommit+'/'+index.sourcePath+'replays/primary/'+e.filename;
-  $('slider').max=String(record.frames.length-1);render(0);
- }catch(error){if(id===serial&&error.name!=='AbortError')showStatus(error.message,true,true)}
+  $('finalSteps').textContent=data.metrics.steps+' / '+e.stepLimit;$('finalScans').textContent=data.metrics.paidScans+' / '+e.scanLimit;
+  $('contactWarning').hidden=data.metrics.unwantedContacts===0;$('contactWarning').textContent='WARNING · UNWANTED CONTACTS ('+data.metrics.unwantedContacts+')';
+  $('archiveNote').hidden=!data.legacy;$('archiveNote').textContent='Historical trace: robot trajectory and scans are recorded. Objects and pedestrians are shown from the saved environment schedule; spatial memory was not recorded.';
+  $('original').href=H2Replay.originalURL(e);$('slider').max=String(record.frames.length-1);render(0);
+ }catch(error){if(id===serial&&error.name!=='AbortError')showStatus(error.message,true,loadSelection)}
 }
 const colors={free:'#152330',unknown:'#485364',memoryFree:'#174247',memoryOccupied:'#9a6250',object:'#f19a43',ped:'#f26970',robot:'#64b4ff',goal:'#ffd074',event:'#fff2bb'};
 function draw(canvas,frame,isMemory){
  const ctx=canvas.getContext('2d'),r=record.replay,w=r.grid.width,h=r.grid.height;
+ if(isMemory&&!frame.memory){ctx.fillStyle='#0b111a';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#aabccc';ctx.font='24px system-ui';ctx.textAlign='center';ctx.fillText('SPATIAL MEMORY NOT RECORDED',canvas.width/2,canvas.height/2);return}
  const inset=9,cell=Math.min((canvas.width-2*inset)/w,(canvas.height-2*inset)/h),x0=(canvas.width-w*cell)/2,y0=(canvas.height-h*cell)/2;
  const point=c=>[x0+(c[0]+.5)*cell,y0+(h-c[1]-.5)*cell];
  const box=c=>[x0+c[0]*cell,y0+(h-1-c[1])*cell];
@@ -43,8 +76,8 @@ function draw(canvas,frame,isMemory){
  ctx.fillStyle='#0b111a';ctx.fillRect(0,0,canvas.width,canvas.height);
  const wall=({R:'#355c88',BP:'#327d70',M:'#76529b'})[r.map_family]||'#355c88';
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-  const i=y*w+x,c=[x,y],v=frame.memory[i];
-  fill(c,isMemory?(v===-1?colors.unknown:v===0?colors.memoryFree:colors.memoryOccupied):record.walls.has(c.join(','))?wall:frame.truth[i]?colors.object:colors.free,.65);
+  const i=y*w+x,c=[x,y],v=frame.memory?.[i];
+  fill(c,isMemory?(v===-1?colors.unknown:v===0?colors.memoryFree:colors.memoryOccupied):record.walls.has(c.join(','))?wall:frame.truth?.[i]?colors.object:colors.free,.65);
  }
  if(isMemory&&frame.observation_granted){
   ctx.strokeStyle='#53dceab0';ctx.lineWidth=1.5;
@@ -53,7 +86,7 @@ function draw(canvas,frame,isMemory){
  if(!isMemory){
   for(const o of frame.objects_after){fill(o.cell,colors.object,cell*.18);const [x,y]=point(o.cell);ctx.fillStyle='#8a4b1b';ctx.fillRect(x-cell*.15,y-cell*.15,cell*.3,cell*.3)}
   for(const ped of frame.pedestrians_xy){const [x,y]=point(ped.cell);ctx.beginPath();ctx.arc(x,y,cell*.28,0,Math.PI*2);ctx.fillStyle=colors.ped;ctx.fill();ctx.strokeStyle='#ffc3c3';ctx.lineWidth=1.8;ctx.stroke()}
-  const ev=frame.event,from=ev.from_cell,to=ev.to_cell;
+  const ev=frame.event,from=ev.from_cell,to=ev.to_cell;for(const change of ev.changes||[]){const c=change.cell||change.from_cell||change.to_cell;if(c)ring(c,colors.event,.43);if(change.to)ring(change.to,colors.event,.43)}
   if(from){ctx.setLineDash([4,3]);ring(from,colors.event,.43);ctx.setLineDash([])}
   if(to)ring(to,colors.event,.43);
   if(from&&to){line([from,to],colors.event,1.5,[5,4]);const [x,y]=point(to),[fx,fy]=point(from),a=Math.atan2(y-fy,x-fx);ctx.strokeStyle=colors.event;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x-8*Math.cos(a-.45),y-8*Math.sin(a-.45));ctx.lineTo(x,y);ctx.lineTo(x-8*Math.cos(a+.45),y-8*Math.sin(a+.45));ctx.stroke()}
@@ -64,50 +97,54 @@ function draw(canvas,frame,isMemory){
  const [gx,gy]=point(r.goal_xy);ctx.fillStyle=colors.goal;ctx.beginPath();ctx.arc(gx,gy,cell*.15,0,Math.PI*2);ctx.fill();
  const [rx,ry]=point(frame.robot_position_after_action_xy);ctx.save();ctx.translate(rx,ry);ctx.rotate(-frame.robot_heading_after_action_rad);ctx.fillStyle=colors.robot;ctx.strokeStyle='#c9ebff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(cell*.38,0);ctx.lineTo(-cell*.25,-cell*.23);ctx.lineTo(-cell*.18,0);ctx.lineTo(-cell*.25,cell*.23);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
 }
+
 function render(value){
- if(!record)return;cursor=Math.max(0,Math.min(record.frames.length-1,Number(value)||0));
- const f=record.frames[cursor],ev=f.event;
+ if(!record)return;cursor=Math.max(0,Math.min(record.frames.length-1,Number(value)||0));const f=record.frames[cursor],ev=f.event;
  $('slider').value=String(cursor);$('first').disabled=$('prev').disabled=cursor===0;$('next').disabled=$('last').disabled=cursor===record.frames.length-1;
- $('stepCount').textContent=f.step+' / '+entry.steps;
- $('scanCount').textContent=f.paid_observation_count+' / '+entry.scanLimit;
+ $('stepCount').textContent=f.step+' / '+record.metrics.steps;$('scanCount').textContent=f.paid_observation_count+' / '+entry.scanLimit;
  $('scanState').textContent=f.observation_granted?'PAID SCAN GRANTED':f.observation_requested?'SCAN REQUESTED · NOT GRANTED':'NO PAID SCAN';
  $('eventType').textContent=eventLabels[ev.event_type]||ev.event_type;
- $('eventDetail').textContent=ev.event_type==='initial_state'?'Initial objects: '+f.objects_after.length:[ev.object_id,ev.from_cell?'FROM '+coords(ev.from_cell):'',ev.to_cell?'TO '+coords(ev.to_cell):'','Objects: '+ev.object_count_before+' → '+ev.object_count_after].filter(Boolean).join(' · ');
+ $('eventDetail').textContent=ev.event_type==='initial_state'?'Initial objects: '+f.objects_after.length:ev.changes?.length?ev.changes.map(c=>[c.action||c.event_type,c.cell?coords(c.cell):c.from_cell?coords(c.from_cell):'',c.to?coords(c.to):c.to_cell?coords(c.to_cell):''].filter(Boolean).join(' ')).join(' · '):[ev.object_id,ev.from_cell?'FROM '+coords(ev.from_cell):'',ev.to_cell?'TO '+coords(ev.to_cell):'',ev.object_count_after!=null?'Objects: '+ev.object_count_before+' → '+ev.object_count_after:''].filter(Boolean).join(' · ');
  const action=f.executed_action;
  $('action').textContent=Array.isArray(action)?(labels[action[0]]||String(action[0]).toUpperCase()):(f.step===0?'INITIAL POSE':String(action??'NO ACTION').toUpperCase());
  const rejection=f.selected_action_shield_rejection,intervention=f.emergency_safety_intervention;
  $('safety').textContent=[Array.isArray(action)&&action[0]!=='wait'?'Action: '+(Array.isArray(action[1])?coords(action[1]):String(action[1]??'')):'',intervention?'Safety: '+(intervention.reason||'intervention'):f.emergency_safety_scan?'Independent safety scan':'No safety scan',rejection?.rejected?'Shield rejected: '+(rejection.reason||'action'):''].filter(Boolean).join(' · ');
- const known=f.memory.reduce((s,v)=>s+(v!==-1?1:0),0);
- $('memoryDetail').textContent=known+' / '+f.memory.length+' cells known';
- const hits=Object.values(f.unwanted_contacts||{}).reduce((s,n)=>s+n,0);
- $('contactDetail').textContent='Unwanted contact pairs at this step: '+hits+(f.goal_reached?' · Goal reached':'');
+ $('memoryDetail').textContent=f.memory?f.memory.reduce((s,v)=>s+(v!==-1?1:0),0)+' / '+f.memory.length+' cells known':'Not recorded';
+ const hits=Object.values(f.unwanted_contacts||{}).reduce((s,n)=>s+Number(n),0);$('contactDetail').textContent=hits?'WARNING · UNWANTED CONTACTS AT THIS STEP: '+hits:f.goal_reached?'Goal reached':'';$('contactDetail').classList.toggle('failure-color',hits>0);
  draw($('truth'),f,false);draw($('memory'),f,true);
 }
 function seek(value){pause();render(value)}
-function startPlayback(){if(!record)return;if(cursor===record.frames.length-1)render(0);playing=true;$('play').textContent='Ⅱ PAUSE';$('play').setAttribute('aria-pressed','true');scheduleTick()}
-function scheduleTick(){clearTimeout(timer);if(!playing)return;timer=setTimeout(()=>{if(!playing||!record)return;if(cursor>=record.frames.length-1){pause();return}render(cursor+1);if(cursor>=record.frames.length-1)pause();else scheduleTick()},200/Number($('speed').value))}
-function toggle(){playing?pause():startPlayback()}
+function startPlayback(){if(!record)return;if(cursor===record.frames.length-1)render(0);playing=true;$('play').textContent='A · Ⅱ PAUSE';$('play').setAttribute('aria-pressed','true');scheduleTick()}
+function scheduleTick(){clearTimeout(timer);if(!playing)return;timer=setTimeout(()=>{if(!playing||!record)return;if(cursor>=record.frames.length-1){pause();return}render(cursor+1);if(cursor>=record.frames.length-1)pause();else scheduleTick()},200/speeds[speedIndex])}
+function toggle(){if(retry){retry();return}playing?pause():startPlayback()}
+function cycleSpeed(){speedIndex=wrap(speedIndex+1,speeds.length);$('speed').textContent='RS · '+speeds[speedIndex]+'×';if(playing)scheduleTick()}
+function back(){location.href='./'}
+async function fullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{ $('fullscreen').title='Fullscreen blocked by browser; click to retry' }}
+$('back').onclick=back;$('fullscreen').onclick=fullscreen;$('modelNext').onclick=()=>select(modelIndex+1,scheduleIndex,mazeIndex);$('scheduleNext').onclick=()=>select(modelIndex,scheduleIndex+1,mazeIndex);$('mazePrev').onclick=()=>select(modelIndex,scheduleIndex,mazeIndex-1);$('mazeNext').onclick=()=>select(modelIndex,scheduleIndex,mazeIndex+1);$('nextFailure').onclick=nextFailure;
 $('first').onclick=()=>seek(0);$('prev').onclick=()=>seek(cursor-1);$('next').onclick=()=>seek(cursor+1);$('last').onclick=()=>record&&seek(record.frames.length-1);
-$('slider').oninput=e=>seek(e.target.value);$('play').onclick=toggle;$('speed').onchange=()=>{if(playing)scheduleTick()};
-for(const id of selectIds)$(id).onchange=loadSelection;
-window.addEventListener('keydown',e=>{if(['SELECT','INPUT','BUTTON','A'].includes(e.target.tagName))return;const k=e.key;
- if(k==='ArrowLeft'){e.preventDefault();seek(cursor-1)}else if(k==='ArrowRight'){e.preventDefault();seek(cursor+1)}else if(k==='Home'){e.preventDefault();seek(0)}else if(k==='End'){e.preventDefault();if(record)seek(record.frames.length-1)}else if(k===' '){e.preventDefault();if(!e.repeat)toggle()}else if(k==='Escape')location.href='./'});
-let previous=new Set(),lastDir=0,nextRepeat=0;
-function gamepad(now){const pad=[...(navigator.getGamepads?.()||[])].find(Boolean);if(pad){const buttons=new Set(pad.buttons.flatMap((b,i)=>b.pressed?[i]:[])),edge=i=>buttons.has(i)&&!previous.has(i);
- if(edge(1)){location.href='./';return}
- if(record){if(edge(0))toggle();else if(edge(6))seek(0);else if(edge(7))seek(record.frames.length-1);else{
- const axis=pad.axes[0]||0,d=buttons.has(14)?-1:buttons.has(15)?1:Math.abs(axis)>.4?Math.sign(axis):0;
- if(d&&(d!==lastDir||now>=nextRepeat)){seek(cursor+d);nextRepeat=now+(d!==lastDir?330:95)}lastDir=d
- }}previous=buttons}else{previous=new Set();lastDir=0}requestAnimationFrame(gamepad)}
-(async()=>{try{
- const response=await fetch('./h2/index.json');if(!response.ok)throw Error('Experiment index unavailable');
- index=H2Replay.validateIndex(await response.json());
- options('map',index.maps.map(m=>[m.number,'Maze '+String(m.number).padStart(2,'0')+' · '+m.family]));
- options('model',index.arms.map(m=>[m.id,m.label]));
- const p=new URLSearchParams(location.search);
- if(index.maps.some(m=>String(m.number)===p.get('map')))$('map').value=p.get('map');
- if(['0','1'].includes(p.get('schedule')))$('schedule').value=p.get('schedule');
- if(index.arms.some(m=>m.id===p.get('model')))$('model').value=p.get('model');
- for(const id of selectIds)$(id).disabled=false;
- await loadSelection();requestAnimationFrame(gamepad)
- }catch(error){showStatus(error.message,true);const b=document.createElement('button');b.textContent='RELOAD';b.onclick=()=>location.reload();$('status').append(b)}})();
+$('slider').oninput=e=>seek(e.target.value);$('play').onclick=toggle;$('speed').onclick=cycleSpeed;
+window.addEventListener('keydown',e=>{
+ if(e.target.tagName==='INPUT'&&e.key.startsWith('Arrow'))return;
+ const k=e.key.toLowerCase(),actions={arrowleft:()=>seek(cursor-1),arrowright:()=>seek(cursor+1),arrowup:()=>select(modelIndex-1,scheduleIndex,mazeIndex),arrowdown:()=>select(modelIndex+1,scheduleIndex,mazeIndex),x:()=>select(modelIndex+1,scheduleIndex,mazeIndex),y:()=>select(modelIndex,scheduleIndex+1,mazeIndex),'[':()=>select(modelIndex,scheduleIndex,mazeIndex-1),']':()=>select(modelIndex,scheduleIndex,mazeIndex+1),f:nextFailure,home:()=>seek(0),end:()=>record&&seek(record.frames.length-1),' ':toggle,s:cycleSpeed,escape:back,b:back};
+ if(actions[k]){e.preventDefault();if(!e.repeat||k.startsWith('arrow'))actions[k]()}
+});
+let previous=null,lastDir='',nextRepeat=0;
+function gamepad(now){
+ const pad=[...(navigator.getGamepads?.()||[])].find(Boolean);
+ if(pad){const buttons=new Set(pad.buttons.flatMap((b,i)=>b.pressed||b.value>.55?[i]:[]));const edge=i=>previous!==null&&buttons.has(i)&&!previous.has(i);
+  if(edge(1)){back();return}
+  if(edge(8))fullscreen();
+  if(edge(0))toggle();else if(edge(2))select(modelIndex+1,scheduleIndex,mazeIndex);else if(edge(3))select(modelIndex,scheduleIndex+1,mazeIndex);else if(edge(4))select(modelIndex,scheduleIndex,mazeIndex-1);else if(edge(5))select(modelIndex,scheduleIndex,mazeIndex+1);else if(edge(6))seek(0);else if(edge(7)&&record)seek(record.frames.length-1);else if(edge(9))nextFailure();else if(edge(11))cycleSpeed();
+  const x=pad.axes[0]||0,y=pad.axes[1]||0,dir=buttons.has(12)?'up':buttons.has(13)?'down':buttons.has(14)?'left':buttons.has(15)?'right':Math.max(Math.abs(x),Math.abs(y))>.4?(Math.abs(x)>=Math.abs(y)?(x<0?'left':'right'):(y<0?'up':'down')):'';
+  if(previous&&dir&&(dir!==lastDir||now>=nextRepeat)){if(dir==='up'||dir==='down')select(modelIndex+(dir==='up'?-1:1),scheduleIndex,mazeIndex);else seek(cursor+(dir==='left'?-1:1));nextRepeat=now+(dir!==lastDir?330:dir==='up'||dir==='down'?200:95)}
+  lastDir=dir;previous=buttons
+ }else{previous=null;lastDir=''}
+ requestAnimationFrame(gamepad)
+}
+async function initialize(){try{
+ showStatus('LOADING EXPERIMENT INDEX…');index=await H2Replay.loadIndex();
+ const p=new URLSearchParams(location.search),m=index.arms.findIndex(a=>a.id===p.get('model')),n=index.maps.findIndex(a=>String(a.number)===p.get('map'));
+ modelIndex=m<0?0:m;mazeIndex=n<0?0:n;const s=H2Replay.schedules.findIndex(a=>a.condition===(p.get('condition')||'high_frequency')&&String(a.number)===p.get('schedule'));scheduleIndex=s<0?0:s;
+ buildControls();await loadSelection()
+ }catch(error){showStatus(error.message,true,()=>location.reload())}}
+ requestAnimationFrame(gamepad);initialize();
