@@ -38,7 +38,7 @@
   }finally{hit.delete();d.delete();probe.delete()}
   return true;
  }
- function create(xml){close();if(!cachedAssets)throw Error('MuJoCo assets not prepared');
+ function create(xml){close();drawingIds=[];if(!cachedAssets)throw Error('MuJoCo assets not prepared');
   const vfs=new mj.MjVFS();
   try{
    for(const [name,bytes] of cachedAssets)vfs.addBuffer('assets/'+name,bytes);
@@ -67,6 +67,46 @@
    return toJson({ids:arr(view(ids)),dist:arr(view(dist))});
   }finally{ids.delete();dist.delete()}
  }
- self.wasmBridge={prepare,create,constants,reset,forward,field,contacts,rays,close,
+ // Presentation-only snapshots from the compiled model. No mj_forward or physics calls here.
+ let drawingIds=[];
+ function drawingGeoms(){
+  check();const out=[],meshType=numeric(mj.mjtGeom.mjGEOM_MESH),boxType=numeric(mj.mjtGeom.mjGEOM_BOX),capType=numeric(mj.mjtGeom.mjGEOM_CAPSULE);
+  for(let i=0;i<model.ngeom;i++){
+   const group=model.geom_group[i],type=model.geom_type[i];
+   if(group===2&&type===meshType||group===5&&(type===boxType||type===capType))out.push(i);
+  }
+  return out;
+ }
+ function poseFor(id){return [...data.geom_xpos.slice(id*3,id*3+3),...data.geom_xmat.slice(id*9,id*9+9)]}
+ function renderPose(){
+  check();
+  if(!drawingIds.length)drawingIds=drawingGeoms().filter(i=>model.geom_bodyid[i]!==0);
+  return toJson(drawingIds.flatMap(poseFor));
+ }
+ function renderAssets(){
+  check();const ids=drawingGeoms(),meshes=[],meshIndex=new Map(),geoms=[];
+  drawingIds=ids.filter(i=>model.geom_bodyid[i]!==0);
+  const meshType=numeric(mj.mjtGeom.mjGEOM_MESH),boxType=numeric(mj.mjtGeom.mjGEOM_BOX);
+  for(const id of ids){
+   const type=model.geom_type[id],mid=model.geom_dataid[id],mat=model.geom_matid[id],group=model.geom_group[id];
+   const moving=model.geom_bodyid[id]!==0;
+   const rgba=arr(mat>=0?model.mat_rgba.slice(mat*4,mat*4+4):model.geom_rgba.slice(id*4,id*4+4));
+   const g={id,kind:type===meshType?'mesh':type===boxType?'box':'capsule',group,rgba,size:arr(model.geom_size.slice(id*3,id*3+3)),moving,poseIndex:moving?drawingIds.indexOf(id):-1,pose:moving?null:poseFor(id)};
+   if(g.kind==='mesh'){
+    if(!meshIndex.has(mid)){
+     const va=model.mesh_vertadr[mid],vn=model.mesh_vertnum[mid],fa=model.mesh_faceadr[mid],fn=model.mesh_facenum[mid];
+     const positions=new Float32Array(model.mesh_vert.slice(va*3,(va+vn)*3)),indices=new Uint32Array(model.mesh_face.slice(fa*3,(fa+fn)*3));
+     if(!positions.length||!indices.length)throw Error('Empty visual mesh '+mid);
+     if(indices.some(k=>k>=vn))throw Error('Unexpected mesh face indices '+mid);
+     meshIndex.set(mid,meshes.length);meshes.push({positions,indices});
+    }
+    g.mesh=meshIndex.get(mid);
+   }
+   geoms.push(g);
+  }
+  if(!meshes.length||!drawingIds.length)throw Error('No G1 visual geometry');
+  return {meshes,geoms,poseLength:drawingIds.length*12};
+ }
+ self.wasmBridge={prepare,create,constants,reset,forward,field,contacts,rays,close,renderPose,renderAssets,
    name2id:(type,name)=>mj.mj_name2id(model,type,name),id2name:(type,id)=>mj.mj_id2name(model,type,id)};
 })();

@@ -149,6 +149,8 @@ def wasm_episode(request_json):
             return scene.check_move(world,position,tuple(value),yaw,target_yaw=yaw)
         return scene.check_turn(world,position,yaw,HEADINGS[int(value)])
 
+    from js import wasmBridge
+    render_3d=bool(q.get('render_3d',False))
     def capture(world,frame):
         extra=scene.update(world,frame)
         contacts={k:int(extra.get(k,0)) for k in ('g1_pedestrian_contact_pairs','g1_wall_contact_pairs',
@@ -165,6 +167,8 @@ def wasm_episode(request_json):
             observed_objects=[list(c) for c in sorted(seen_objects)],observed_people=[list(c) for c in sorted(seen_people)],
             observations=int(frame['observation_count']),contacts=contacts,contact_events=list(events),
             step_limit=rules['step_limit'],max_observations=rules['max_observations'],backend='mujoco-wasm'))
+        if render_3d:
+            history[-1]['render_pose']=json.loads(wasmBridge.renderPose())
         return extra
 
     metrics,_=run_episode(scenario,config,q['strategy'],seed=q['seed'],_frame_callback=capture,
