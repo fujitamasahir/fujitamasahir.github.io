@@ -12,13 +12,22 @@ function showStatus(message,error=false,retryAction=null){retry=retryAction;cons
 function pause(){playing=false;clearTimeout(timer);timer=null;$('play').textContent='A · ▶ PLAY';$('play').setAttribute('aria-pressed','false')}
 function rowCell(row,tag,value){const el=document.createElement(tag);el.textContent=value;row.append(el);return el}
 function tableButton(label,callback){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=callback;return b}
-function revealIn(container,element){if(!element)return;const c=container.getBoundingClientRect(),e=element.getBoundingClientRect();if(e.top<c.top)container.scrollTop+=e.top-c.top;else if(e.bottom>c.bottom)container.scrollTop+=e.bottom-c.bottom}
+function revealIn(container,element){
+ if(!element)return;
+ // Sticky thead covers the top of the scrollport. A row under it is not visible.
+ if(element===element.parentElement.firstElementChild){container.scrollTop=0;return}
+ const c=container.getBoundingClientRect(),e=element.getBoundingClientRect();
+ const header=container.querySelector('thead');
+ const top=c.top+container.clientTop+(header?.getBoundingClientRect().height||0);
+ const bottom=c.top+container.clientTop+container.clientHeight;
+ if(e.top<top)container.scrollTop+=e.top-top;
+ else if(e.bottom>bottom)container.scrollTop+=e.bottom-bottom;
+}
 function refreshSelection(){
  const model=index.arms[modelIndex],map=index.maps[mazeIndex];
  Array.from($('modelRows').children).forEach((r,i)=>{r.classList.toggle('selected',i===modelIndex);r.querySelector('button').setAttribute('aria-pressed',String(i===modelIndex))});
  revealIn($('modelScroll'),$('modelRows').children[modelIndex]);
- Array.from($('scheduleChoices').children).forEach((b,i)=>{b.classList.toggle('selected',i===scheduleIndex);b.setAttribute('aria-pressed',String(i===scheduleIndex))});
- $('mazeLabel').textContent=String(map.number).padStart(2,'0')+' · '+map.family;
+ $('mazeLabel').textContent='MAZE '+String(map.number).padStart(2,'0')+' · '+map.family+' / '+H2Replay.schedules[scheduleIndex].label;
  $('mazeRows').replaceChildren();
  let failures=0;
  for(const [i,m] of index.maps.entries()){
@@ -33,7 +42,7 @@ function refreshSelection(){
   }$('mazeRows').append(row)
  }
  $('nextFailure').disabled=failures===0;
- revealIn($('mazeRows').closest('.matrix-scroll'),$('mazeRows').children[mazeIndex]);
+ revealIn($('matrixScroll'),$('mazeRows').children[mazeIndex]);
 }
 function select(m,s,n){if(!index)return;const a=wrap(m,index.arms.length),b=wrap(s,4),c=wrap(n,index.maps.length);if(a===modelIndex&&b===scheduleIndex&&c===mazeIndex&&record)return;modelIndex=a;scheduleIndex=b;mazeIndex=c;refreshSelection();loadSelection()}
 function nextFailure(){
@@ -41,14 +50,14 @@ function nextFailure(){
  for(let d=1;d<=index.maps.length*4;d++){const k=wrap(start+d,index.maps.length*4),n=Math.floor(k/4),s=k%4;if(!H2Replay.getEntry(index,index.maps[n].number,s,index.arms[modelIndex].id).success){select(modelIndex,s,n);return}}
 }
 function buildControls(){
- for(const [i,m] of index.arms.entries()){const r=document.createElement('tr'),td=rowCell(r,'th','');td.append(tableButton(m.label,()=>select(i,scheduleIndex,mazeIndex)));rowCell(r,'td',m.goals.original+' / 72');rowCell(r,'td',m.goals.high_frequency+' / 72');$('modelRows').append(r)}
- H2Replay.schedules.forEach((s,i)=>$('scheduleChoices').append(tableButton(s.label,()=>select(modelIndex,i,mazeIndex))));
+ for(const [i,m] of index.arms.entries()){const r=document.createElement('tr'),td=rowCell(r,'th','');td.append(tableButton(m.label,()=>select(i,scheduleIndex,mazeIndex)));rowCell(r,'td',String(m.goals.original));rowCell(r,'td',String(m.goals.high_frequency));$('modelRows').append(r)}
  $('selection').hidden=false;refreshSelection()
 }
 async function loadSelection(){
  if(!index)return;
  const id=++serial;download?.abort();download=new AbortController();pause();record=null;retry=null;$('review').hidden=true;
  entry=choice();const e=entry;
+ $('outcome').textContent='LOADING…';$('outcome').className='';$('finalSteps').textContent='—';$('finalScans').textContent='—';
  const params=new URLSearchParams({model:e.model.id,condition:e.condition,schedule:String(e.schedule),map:String(e.map.number)});history.replaceState(null,'','?'+params.toString());
  showStatus('LOADING RECORDED EPISODE…');
  try{
@@ -61,7 +70,7 @@ async function loadSelection(){
   $('contactWarning').hidden=data.metrics.unwantedContacts===0;$('contactWarning').textContent='WARNING · UNWANTED CONTACTS ('+data.metrics.unwantedContacts+')';
   $('archiveNote').hidden=!data.legacy;$('archiveNote').textContent='Historical trace: robot trajectory and scans are recorded. Objects and pedestrians are shown from the saved environment schedule; spatial memory was not recorded.';
   $('original').href=H2Replay.originalURL(e);$('slider').max=String(record.frames.length-1);render(0);
- }catch(error){if(id===serial&&error.name!=='AbortError')showStatus(error.message,true,loadSelection)}
+ }catch(error){if(id===serial&&error.name!=='AbortError'){$('outcome').textContent='UNAVAILABLE';showStatus(error.message,true,loadSelection)}}
 }
 const colors={free:'#152330',unknown:'#485364',memoryFree:'#174247',memoryOccupied:'#9a6250',object:'#f19a43',ped:'#f26970',robot:'#64b4ff',goal:'#ffd074',event:'#fff2bb'};
 function draw(canvas,frame,isMemory){
@@ -75,9 +84,11 @@ function draw(canvas,frame,isMemory){
  function line(path,color,width,dashes=[]){if(path.length<2)return;ctx.beginPath();path.forEach((c,i)=>{const p=point(c);i?ctx.lineTo(...p):ctx.moveTo(...p)});ctx.setLineDash(dashes);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineJoin='round';ctx.lineCap='round';ctx.stroke();ctx.setLineDash([])}
  ctx.fillStyle='#0b111a';ctx.fillRect(0,0,canvas.width,canvas.height);
  const wall=({R:'#355c88',BP:'#327d70',M:'#76529b'})[r.map_family]||'#355c88';
+ // Occupancy includes pedestrians. Use explicit recorded object cells for orange fill.
+ const objectCells=new Set((frame.objects_after||[]).map(o=>o.cell.join(',')));
  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
   const i=y*w+x,c=[x,y],v=frame.memory?.[i];
-  fill(c,isMemory?(v===-1?colors.unknown:v===0?colors.memoryFree:colors.memoryOccupied):record.walls.has(c.join(','))?wall:frame.truth?.[i]?colors.object:colors.free,.65);
+  fill(c,isMemory?(v===-1?colors.unknown:v===0?colors.memoryFree:colors.memoryOccupied):record.walls.has(c.join(','))?wall:objectCells.has(c.join(','))?colors.object:colors.free,.65);
  }
  if(isMemory&&frame.observation_granted){
   ctx.strokeStyle='#53dceab0';ctx.lineWidth=1.5;
@@ -85,7 +96,6 @@ function draw(canvas,frame,isMemory){
  }
  if(!isMemory){
   for(const o of frame.objects_after){fill(o.cell,colors.object,cell*.18);const [x,y]=point(o.cell);ctx.fillStyle='#8a4b1b';ctx.fillRect(x-cell*.15,y-cell*.15,cell*.3,cell*.3)}
-  for(const ped of frame.pedestrians_xy){const [x,y]=point(ped.cell);ctx.beginPath();ctx.arc(x,y,cell*.28,0,Math.PI*2);ctx.fillStyle=colors.ped;ctx.fill();ctx.strokeStyle='#ffc3c3';ctx.lineWidth=1.8;ctx.stroke()}
   const ev=frame.event,from=ev.from_cell,to=ev.to_cell;for(const change of ev.changes||[]){const c=change.cell||change.from_cell||change.to_cell;if(c)ring(c,colors.event,.43);if(change.to)ring(change.to,colors.event,.43)}
   if(from){ctx.setLineDash([4,3]);ring(from,colors.event,.43);ctx.setLineDash([])}
   if(to)ring(to,colors.event,.43);
@@ -96,6 +106,8 @@ function draw(canvas,frame,isMemory){
  ring(r.start_xy,'#9ec8e5',.30);ring(r.goal_xy,colors.goal,.38);
  const [gx,gy]=point(r.goal_xy);ctx.fillStyle=colors.goal;ctx.beginPath();ctx.arc(gx,gy,cell*.15,0,Math.PI*2);ctx.fill();
  const [rx,ry]=point(frame.robot_position_after_action_xy);ctx.save();ctx.translate(rx,ry);ctx.rotate(-frame.robot_heading_after_action_rad);ctx.fillStyle=colors.robot;ctx.strokeStyle='#c9ebff';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(cell*.38,0);ctx.lineTo(-cell*.25,-cell*.23);ctx.lineTo(-cell*.18,0);ctx.lineTo(-cell*.25,cell*.23);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+ // Draw pedestrians as a solid red circle, matching the legend, above the path.
+ if(!isMemory)for(const ped of frame.pedestrians_xy){const [x,y]=point(ped.cell);ctx.beginPath();ctx.arc(x,y,cell*.28,0,Math.PI*2);ctx.fillStyle=colors.ped;ctx.fill()}
 }
 
 function render(value){
@@ -117,28 +129,52 @@ function seek(value){pause();render(value)}
 function startPlayback(){if(!record)return;if(cursor===record.frames.length-1)render(0);playing=true;$('play').textContent='A · Ⅱ PAUSE';$('play').setAttribute('aria-pressed','true');scheduleTick()}
 function scheduleTick(){clearTimeout(timer);if(!playing)return;timer=setTimeout(()=>{if(!playing||!record)return;if(cursor>=record.frames.length-1){pause();return}render(cursor+1);if(cursor>=record.frames.length-1)pause();else scheduleTick()},200/speeds[speedIndex])}
 function toggle(){if(retry){retry();return}playing?pause():startPlayback()}
-function cycleSpeed(){speedIndex=wrap(speedIndex+1,speeds.length);$('speed').textContent='RS · '+speeds[speedIndex]+'×';if(playing)scheduleTick()}
+function cycleSpeed(){speedIndex=wrap(speedIndex+1,speeds.length);$('speed').textContent='SPEED '+speeds[speedIndex]+'×';if(playing)scheduleTick()}
 function back(){location.href='./'}
 async function fullscreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}catch{ $('fullscreen').title='Fullscreen blocked by browser; click to retry' }}
-$('back').onclick=back;$('fullscreen').onclick=fullscreen;$('modelNext').onclick=()=>select(modelIndex+1,scheduleIndex,mazeIndex);$('scheduleNext').onclick=()=>select(modelIndex,scheduleIndex+1,mazeIndex);$('mazePrev').onclick=()=>select(modelIndex,scheduleIndex,mazeIndex-1);$('mazeNext').onclick=()=>select(modelIndex,scheduleIndex,mazeIndex+1);$('nextFailure').onclick=nextFailure;
+$('back').onclick=back;$('fullscreen').onclick=fullscreen;$('modelNext').onclick=()=>select(modelIndex+1,scheduleIndex,mazeIndex);$('nextFailure').onclick=nextFailure;
 $('first').onclick=()=>seek(0);$('prev').onclick=()=>seek(cursor-1);$('next').onclick=()=>seek(cursor+1);$('last').onclick=()=>record&&seek(record.frames.length-1);
 $('slider').oninput=e=>seek(e.target.value);$('play').onclick=toggle;$('speed').onclick=cycleSpeed;
 window.addEventListener('keydown',e=>{
- if(e.target.tagName==='INPUT'&&e.key.startsWith('Arrow'))return;
- const k=e.key.toLowerCase(),actions={arrowleft:()=>seek(cursor-1),arrowright:()=>seek(cursor+1),arrowup:()=>select(modelIndex-1,scheduleIndex,mazeIndex),arrowdown:()=>select(modelIndex+1,scheduleIndex,mazeIndex),x:()=>select(modelIndex+1,scheduleIndex,mazeIndex),y:()=>select(modelIndex,scheduleIndex+1,mazeIndex),'[':()=>select(modelIndex,scheduleIndex,mazeIndex-1),']':()=>select(modelIndex,scheduleIndex,mazeIndex+1),f:nextFailure,home:()=>seek(0),end:()=>record&&seek(record.frames.length-1),' ':toggle,s:cycleSpeed,escape:back,b:back};
+ if(e.target.tagName==='INPUT'&&e.key.startsWith('Arrow')&&!e.shiftKey)return;
+ const k=e.key.toLowerCase();
+ if(e.shiftKey&&k.startsWith('arrow')){e.preventDefault();moveMatrix(k.slice(5));return}
+ const actions={arrowleft:()=>seek(cursor-1),arrowright:()=>seek(cursor+1),arrowup:()=>select(modelIndex-1,scheduleIndex,mazeIndex),arrowdown:()=>select(modelIndex+1,scheduleIndex,mazeIndex),x:()=>select(modelIndex+1,scheduleIndex,mazeIndex),y:()=>select(modelIndex,scheduleIndex+1,mazeIndex),'[':()=>select(modelIndex,scheduleIndex,mazeIndex-1),']':()=>select(modelIndex,scheduleIndex,mazeIndex+1),f:nextFailure,home:()=>seek(0),end:()=>record&&seek(record.frames.length-1),' ':toggle,s:cycleSpeed,escape:back,b:back};
  if(actions[k]){e.preventDefault();if(!e.repeat||k.startsWith('arrow'))actions[k]()}
 });
-let previous=null,lastDir='',nextRepeat=0;
+function stickDirection(x,y){
+ return Math.max(Math.abs(x),Math.abs(y))>.4?(Math.abs(x)>=Math.abs(y)?(x<0?'left':'right'):(y<0?'up':'down')):'';
+}
+function moveMatrix(dir){
+ if(dir==='up'||dir==='down')select(modelIndex,scheduleIndex,mazeIndex+(dir==='up'?-1:1));
+ else if(dir==='left'||dir==='right')select(modelIndex,scheduleIndex+(dir==='left'?-1:1),mazeIndex);
+}
+function moveMain(dir){
+ if(dir==='up'||dir==='down')select(modelIndex+(dir==='up'?-1:1),scheduleIndex,mazeIndex);
+ else if(dir==='left'||dir==='right')seek(cursor+(dir==='left'?-1:1));
+}
+function repeatDirection(state,dir,now,move,interval){
+ if(dir&&(dir!==state.dir||now>=state.next)){move(dir);state.next=now+(dir!==state.dir?330:interval)}
+ state.dir=dir;
+}
+let previous=null,mainHold={dir:'',next:0},matrixHold={dir:'',next:0};
 function gamepad(now){
  const pad=[...(navigator.getGamepads?.()||[])].find(Boolean);
- if(pad){const buttons=new Set(pad.buttons.flatMap((b,i)=>b.pressed||b.value>.55?[i]:[]));const edge=i=>previous!==null&&buttons.has(i)&&!previous.has(i);
+ if(pad){
+  const buttons=new Set(pad.buttons.flatMap((b,i)=>b.pressed||b.value>.55?[i]:[]));
+  const edge=i=>previous!==null&&buttons.has(i)&&!previous.has(i);
   if(edge(1)){back();return}
   if(edge(8))fullscreen();
   if(edge(0))toggle();else if(edge(2))select(modelIndex+1,scheduleIndex,mazeIndex);else if(edge(3))select(modelIndex,scheduleIndex+1,mazeIndex);else if(edge(4))select(modelIndex,scheduleIndex,mazeIndex-1);else if(edge(5))select(modelIndex,scheduleIndex,mazeIndex+1);else if(edge(6))seek(0);else if(edge(7)&&record)seek(record.frames.length-1);else if(edge(9))nextFailure();else if(edge(11))cycleSpeed();
-  const x=pad.axes[0]||0,y=pad.axes[1]||0,dir=buttons.has(12)?'up':buttons.has(13)?'down':buttons.has(14)?'left':buttons.has(15)?'right':Math.max(Math.abs(x),Math.abs(y))>.4?(Math.abs(x)>=Math.abs(y)?(x<0?'left':'right'):(y<0?'up':'down')):'';
-  if(previous&&dir&&(dir!==lastDir||now>=nextRepeat)){if(dir==='up'||dir==='down')select(modelIndex+(dir==='up'?-1:1),scheduleIndex,mazeIndex);else seek(cursor+(dir==='left'?-1:1));nextRepeat=now+(dir!==lastDir?330:dir==='up'||dir==='down'?200:95)}
-  lastDir=dir;previous=buttons
- }else{previous=null;lastDir=''}
+  const left=buttons.has(12)?'up':buttons.has(13)?'down':buttons.has(14)?'left':buttons.has(15)?'right':stickDirection(pad.axes[0]||0,pad.axes[1]||0);
+  const right=stickDirection(pad.axes[2]||0,pad.axes[3]||0);
+  if(previous){
+   // The right stick navigates the matrix; the left stick / D-pad retain the model and step controls.
+   repeatDirection(matrixHold,right,now,moveMatrix,160);
+   repeatDirection(mainHold,right?'':left,now,moveMain,left==='up'||left==='down'?200:95)
+  }
+  previous=buttons
+ }else{previous=null;mainHold.dir=matrixHold.dir='';mainHold.next=matrixHold.next=0}
  requestAnimationFrame(gamepad)
 }
 async function initialize(){try{
