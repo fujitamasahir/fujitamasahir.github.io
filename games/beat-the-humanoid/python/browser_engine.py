@@ -151,7 +151,9 @@ def wasm_episode(request_json):
 
     from js import wasmBridge
     render_3d=bool(q.get('render_3d',False))
+    render_failure=None
     def capture(world,frame):
+        nonlocal render_failure
         extra=scene.update(world,frame)
         contacts={k:int(extra.get(k,0)) for k in ('g1_pedestrian_contact_pairs','g1_wall_contact_pairs',
             'g1_persistent_obstacle_contact_pairs','g1_unwanted_floor_contact_pairs','g1_self_contact_pairs')}
@@ -167,8 +169,11 @@ def wasm_episode(request_json):
             observed_objects=[list(c) for c in sorted(seen_objects)],observed_people=[list(c) for c in sorted(seen_people)],
             observations=int(frame['observation_count']),contacts=contacts,contact_events=list(events),
             step_limit=rules['step_limit'],max_observations=rules['max_observations'],backend='mujoco-wasm'))
-        if render_3d:
-            history[-1]['render_pose']=json.loads(wasmBridge.renderPose())
+        if render_3d and render_failure is None:
+            try:
+                history[-1]['render_pose']=json.loads(wasmBridge.renderPose())
+            except Exception as error:
+                render_failure=str(error)
         return extra
 
     metrics,_=run_episode(scenario,config,q['strategy'],seed=q['seed'],_frame_callback=capture,
@@ -185,7 +190,7 @@ def wasm_episode(request_json):
         blocked_attempts_not_contacts=int(metrics.get('g1_footprint_blocked_attempts',0)),
         backend='mujoco-wasm',footprint_half_extents_m=list(scene.footprint_half_extents_local),
         emergency_safety_scans=int(metrics.get('emergency_safety_scans',0)))
-    return json.dumps(dict(frames=history,result=result),allow_nan=False)
+    return json.dumps(dict(frames=history,result=result,renderError=render_failure),allow_nan=False)
 
 def browser_episode(request_json):
     if json.loads(request_json).get('backend')=='mujoco-wasm':

@@ -9,7 +9,7 @@ window.browserGame=(()=>{
  function warm(){
   if(ready)return ready;
   ready=new Promise((resolve,reject)=>{
-   worker=new Worker('./engine-worker.js?v=3');
+   worker=new Worker('./engine-worker.js?v=4');
    worker.onmessage=({data})=>{
     if(data.type==='ready'){resolve();if(!running)status(label()+' · READY');return}
     if(data.type==='progress'){status(data.message);return}

@@ -1,10 +1,10 @@
 const CDN='https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
 const files=['__init__','simulation','observation','scheduling','memory','navigation','evaluation','mujoco_navigation','mujoco_perception','emergency_safety','pedestrian_tracking'].map(n=>'spatial_memory/'+n+'.py').concat('browser_engine.py','mujoco.py');
 const ready=(async()=>{
- importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=3');
+ importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=4');
  const p=await loadPyodide({indexURL:CDN});
  await p.loadPackage('numpy');p.FS.mkdirTree('/game/spatial_memory');
- await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file+'?v=3');if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
+ await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file+'?v=4');if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
  p.runPython("import sys; sys.path.insert(0, '/game'); from browser_engine import browser_episode");return p;
 })();
 let nativeReady;
@@ -31,7 +31,7 @@ self.onmessage=async({data})=>{
   try{
    const value=JSON.parse(fn(JSON.stringify(data.payload)));
    const transfer=[];
-   if(native&&data.payload.render_3d){
+   if(native&&data.payload.render_3d&&!value.renderError){
     try{
      value.renderAssets=wasmBridge.renderAssets();
      for(const mesh of value.renderAssets.meshes)transfer.push(mesh.positions.buffer,mesh.indices.buffer);
