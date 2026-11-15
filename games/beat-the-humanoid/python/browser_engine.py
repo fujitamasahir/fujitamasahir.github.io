@@ -65,7 +65,7 @@ def make_pedestrian_paths(maze: dict, starts: list[list[int]], objects: list[lis
 
 CONFIG = json.loads("{\"common_horizon_metrics\":true,\"g1_navigation\":{\"footprint_source\":\"pinned G1 collision geometry\",\"forward_translation_default\":true,\"local_half_extents_m\":[0.218954831277208,0.3279970912029507],\"motion\":\"cardinal kinematic translation with separate in-place turns\",\"observed_occupancy_only\":true,\"pedestrian_prediction\":\"motion inferred only from observed first-hit cells; no simulator schedule or future positions\",\"rejected_action_history\":true,\"retreat_eligibility\":\"recent single-cluster pedestrian detections in two observations indicate imminent approach; entire backward sweep observed free, otherwise wait\",\"sidestep_eligibility\":\"around a measured persistent obstacle, or one lateral escape from a close observed pedestrian threat; complete swept clearance observed free and only the selected action is shield-checked\",\"turn_clearance\":\"deferred_to_selected_action_mujoco_shield; no AABB prefilter; one selected turn checked, rejection returned as planner feedback\"},\"max_observations\":20,\"max_steps\":80,\"mujoco_cell_size_m\":0.75,\"mujoco_ray_sensor\":{\"horizontal_fov_deg\":120,\"range_m\":6,\"ray_count\":61,\"sample_spacing_m\":0.075},\"mujoco_timestep_seconds\":0.02,\"observation_cost\":1,\"sensor\":{\"noise\":0,\"occlusion\":true,\"radius\":3},\"sensor_backend\":\"mujoco3d\",\"unknown\":\"optimistic\",\"update_interval\":4}")
 
-def browser_episode(request_json):
+def grid_episode(request_json):
     q=json.loads(request_json)
     m=q['maze']
     objects=q['objects']
@@ -97,3 +97,93 @@ def browser_episode(request_json):
     metrics,_=run_episode(scenario,config,q['strategy'],seed=q['seed'],_frame_callback=capture)
     result=dict(winner='AI WINS' if metrics['success'] and not events else 'HUMAN WINS',success=bool(metrics['success']),elapsed_steps=int(metrics['elapsed_steps']),observation_count=int(metrics['observation_count']),max_observations=rules['max_observations'],step_limit=rules['step_limit'],maze_id=m['id'],strategy=q['strategy'],difficulty=q['difficulty'],actual_unwanted_contacts=len(events),contact_events=events,blocked_attempts_not_contacts=int(metrics['blocked_movement_attempts']),backend='grid2d-proxy')
     return json.dumps(dict(frames=history,result=result),allow_nan=False)
+
+
+def wasm_episode(request_json):
+    """Use the same evaluator, forward-first planner, ray sensors and action shield.
+    The browser supplies the native API subset through mujoco.py.
+    """
+    from spatial_memory.mujoco_navigation import MujocoNavigationScene
+    from spatial_memory.mujoco_perception import MujocoRayPerception
+    from spatial_memory.emergency_safety import IndependentEmergencySafetySensor, EmergencySafetyController
+    from spatial_memory.pedestrian_tracking import ObservedPedestrianTracker
+    from spatial_memory.navigation import HEADINGS, heading_index, plan_g1_default_policy
+
+    q=json.loads(request_json)
+    m=q['maze']
+    rules=q['rules']
+    scenario=make_scenario(m,q['objects'],make_pedestrian_paths(m,q['pedestrians'],q['objects'],rules['step_limit']))
+    config=json.loads(json.dumps(CONFIG))
+    config.update(max_steps=rules['step_limit'],max_observations=rules['max_observations'],common_horizon_metrics=False)
+    scene=MujocoNavigationScene(scenario,cell_size=config['mujoco_cell_size_m'],timestep=config['mujoco_timestep_seconds'])
+    memory_sensor=MujocoRayPerception(scene,**config['mujoco_ray_sensor'])
+    safety_sensor=IndependentEmergencySafetySensor(scene,range_m=2.0,ray_count=61,sample_spacing_m=0.075,ray_backend='multi')
+    safety=EmergencySafetyController(scene)
+    tracker=ObservedPedestrianTracker(max_age_steps=8)
+    state=dict(static=set(),observed_step=-1,planner_step=0)
+    history=[]
+    trajectory=[]
+    events=[]
+    seen_objects=set()
+    seen_people=set()
+
+    def planner(grid,position,goal,unknown,yaw,blocked):
+        state['planner_step']+=1
+        recent=state['static'] if 0<=state['planner_step']-state['observed_step']<=8 else set()
+        return plan_g1_default_policy(grid,position,goal,heading=heading_index(yaw),
+            unknown=unknown,local_extents=scene.footprint_half_extents_local,cell_size=scene.cell_size,
+            blocked_actions=blocked,static_obstacle_cells=recent,pedestrian_context=tracker.context(),step=state['planner_step'])
+
+    def record(_obs,step,_position):
+        stats=memory_sensor.last_stats
+        tracker.observe(step,stats.get('visible_pedestrian_cells',()))
+        state['static']={tuple(c) for c in stats.get('visible_persistent_obstacle_cells',())}
+        state['observed_step']=int(step)
+        seen_objects.update(state['static'])
+        seen_people.clear()
+        seen_people.update(tuple(c) for c in stats.get('visible_pedestrian_cells',()))
+
+    def checker(world,position,action,yaw):
+        kind,value=action
+        if kind in {'move','sidestep','retreat'}:
+            return scene.check_move(world,position,tuple(value),yaw,target_yaw=yaw)
+        return scene.check_turn(world,position,yaw,HEADINGS[int(value)])
+
+    def capture(world,frame):
+        extra=scene.update(world,frame)
+        contacts={k:int(extra.get(k,0)) for k in ('g1_pedestrian_contact_pairs','g1_wall_contact_pairs',
+            'g1_persistent_obstacle_contact_pairs','g1_unwanted_floor_contact_pairs','g1_self_contact_pairs')}
+        if any(contacts.values()):
+            events.append(dict(step=int(world.step),contacts=contacts,backend='mujoco-wasm'))
+        pos=list(map(int,frame['position']))
+        trajectory.append(pos)
+        history.append(dict(status='running',frame_seq=len(history),step=int(world.step),
+            maze_id=m['id'],strategy=q['strategy'],difficulty=q['difficulty'],position=pos,
+            heading_yaw=float(frame['heading_yaw']),memory=frame['memory'].astype(int).tolist(),
+            geometry=frame['geometry'].astype(int).tolist(),objects=[list(c) for c in sorted(world.objects)],
+            people=[list(c) for c in sorted(world.people())],trajectory=list(trajectory),
+            observed_objects=[list(c) for c in sorted(seen_objects)],observed_people=[list(c) for c in sorted(seen_people)],
+            observations=int(frame['observation_count']),contacts=contacts,contact_events=list(events),
+            step_limit=rules['step_limit'],max_observations=rules['max_observations'],backend='mujoco-wasm'))
+        return extra
+
+    metrics,_=run_episode(scenario,config,q['strategy'],seed=q['seed'],_frame_callback=capture,
+        _observation_provider=memory_sensor.observe,_g1_planner=planner,_action_checker=checker,
+        _initial_observation_callback=record,_observation_callback=record,
+        _emergency_safety_sensor=safety_sensor.scan,_emergency_safety_controller=safety.choose)
+    actual=int(metrics.get('g1_unwanted_contact_pairs',0))
+    if actual!=sum(sum(event['contacts'].values()) for event in events):
+        raise RuntimeError('Contact count mismatch in WASM adapter')
+    result=dict(winner='AI WINS' if metrics['success'] and actual==0 else 'HUMAN WINS',
+        success=bool(metrics['success']),elapsed_steps=int(metrics['elapsed_steps']),observation_count=int(metrics['observation_count']),
+        max_observations=rules['max_observations'],step_limit=rules['step_limit'],maze_id=m['id'],strategy=q['strategy'],
+        difficulty=q['difficulty'],actual_unwanted_contacts=actual,contact_events=events,
+        blocked_attempts_not_contacts=int(metrics.get('g1_footprint_blocked_attempts',0)),
+        backend='mujoco-wasm',footprint_half_extents_m=list(scene.footprint_half_extents_local),
+        emergency_safety_scans=int(metrics.get('emergency_safety_scans',0)))
+    return json.dumps(dict(frames=history,result=result),allow_nan=False)
+
+def browser_episode(request_json):
+    if json.loads(request_json).get('backend')=='mujoco-wasm':
+        return wasm_episode(request_json)
+    return grid_episode(request_json)

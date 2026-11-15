@@ -113,3 +113,5 @@ body:is([data-difficulty=medium],[data-difficulty=hard]) :is(#liveDifficulty,#re
 @keyframes resultHeroBob{0%,100%{transform:translateY(0) scale(1.32)}50%{transform:translateY(-15px) scale(1.32)}}
 
 .browser-banner{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;gap:8px;padding:4px 16px;background:#0c1625;color:#9eb4cc;font:11px system-ui;z-index:50}.browser-banner a{color:#74d8f2;text-decoration:none}main{height:calc(100dvh - 78px)}.result-hero.defeated img{filter:grayscale(.6);transform:scale(1.19) rotate(9deg);animation:proxyTremble .3s ease-in-out infinite}@keyframes proxyTremble{50%{transform:scale(1.19) rotate(9deg) translateY(2px)}}
+
+.backend-choice{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#a8bbd0;white-space:nowrap}.backend-choice select{background:#111d2b;color:#e6f2ff;border:1px solid #4a647c;border-radius:6px;padding:8px;font:bold 12px system-ui;cursor:pointer}.backend-choice select:focus-visible{outline:2px solid #53dcea}#browserStatus{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}

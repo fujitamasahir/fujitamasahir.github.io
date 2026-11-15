@@ -2,14 +2,17 @@
 window.browserGame=(()=>{
  const difficulties={easy:{step_limit:80,max_static_objects:4,max_pedestrians:2,max_observations:20},medium:{step_limit:120,max_static_objects:2,max_pedestrians:1,max_observations:30},hard:{step_limit:160,max_static_objects:1,max_pedestrians:0,max_observations:40}};
  const catalog=fetch('./data/maze_catalog.json').then(async r=>{if(!r.ok)throw Error('Maze catalog unavailable');return (await r.json()).mazes});
- let worker,ready,job,seq=0,episode,pending,running=false,skip=false,generation=0;
+ let worker,ready,job,seq=0,episode,pending,running=false,skip=false,generation=0,backend='grid2d-proxy';
  const status=s=>document.getElementById('browserStatus').textContent=s;
+ const label=()=>backend==='mujoco-wasm'?'MUJOCO WASM · EXPERIMENTAL':'2D BROWSER PROTOTYPE';
+ const note=()=>{document.getElementById('backendNote').textContent=backend==='mujoco-wasm'?'G1 physics · 2D display · unvalidated':'Grid proxy · not MuJoCo physics'};
  function warm(){
   if(ready)return ready;
   ready=new Promise((resolve,reject)=>{
-   worker=new Worker('./engine-worker.js');
+   worker=new Worker('./engine-worker.js?v=2');
    worker.onmessage=({data})=>{
-    if(data.type==='ready'){resolve();status('2D BROWSER PROTOTYPE · READY');return}
+    if(data.type==='ready'){resolve();if(!running)status(label()+' · READY');return}
+    if(data.type==='progress'){status(data.message);return}
     if(data.type==='error'){reject(Error(data.error));status('ENGINE LOAD FAILED · RELOAD');return}
     if(job&&data.id===job.id){const j=job;job=null;data.error?j.reject(Error(data.error)):j.resolve(data.value)}
    };
@@ -41,7 +44,7 @@ window.browserGame=(()=>{
    const v=validate(maze,p.objects||[],p.pedestrians||[],p.difficulty);
    if(!v.valid)return {ok:false,error:v.errors.join(' ')};
    if(!['periodic','age','uncertainty'].includes(p.strategy))return {ok:false,error:'Unknown strategy'};
-   running=true;skip=false;episode=null;generation++;pending=calculate({...p,maze,rules:difficulties[p.difficulty],seed:42000+generation});pending.catch(()=>{});return {ok:true};
+   backend=p.backend==='mujoco-wasm'?'mujoco-wasm':'grid2d-proxy';note();running=true;skip=false;episode=null;generation++;pending=calculate({...p,backend,maze,rules:difficulties[p.difficulty],seed:42000+generation});pending.catch(()=>{});return {ok:true};
   }
   if(url==='/api/skip'){skip=true;return {ok:true}}
   if(url==='/api/reset'){if(running)throw Error('Challenge still running');generation++;episode=null;return {ok:true}}
@@ -50,10 +53,10 @@ window.browserGame=(()=>{
   throw Error('Unsupported local operation: '+url)
  }
  async function play(onFrame,onError){const token=generation;
-  try{status('2D BROWSER PROTOTYPE · COMPUTING');const data=await pending;if(token!==generation)return;status('2D BROWSER PROTOTYPE · READY');
+  try{status(label()+' · COMPUTING');const data=await pending;if(token!==generation)return;if(data.result.backend!==backend)throw Error('Unexpected physics backend');status(label()+' · REPLAYING');
    for(const frame of data.frames){if(token!==generation)return;if(skip)break;onFrame(frame);await new Promise(r=>setTimeout(r,130))}
-   episode=data;running=false;onFrame({...data.frames.at(-1),status:'finished',result:data.result});
-  }catch(e){running=false;status('ENGINE ERROR · RELOAD TO RETRY');onError(e)}
+   episode=data;running=false;status(label()+' · READY');onFrame({...data.frames.at(-1),status:'finished',result:data.result});
+  }catch(e){running=false;status(label()+' · ERROR: '+e.message);onError(e)}
  }
  return {api,play,validate}
 })();

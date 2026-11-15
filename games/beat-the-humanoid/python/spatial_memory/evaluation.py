@@ -300,7 +300,7 @@ def run_episode(scenario, config, method, seed, *, _controller_factory=None,
         metrics['g1_navigation_no_route_steps'] = no_route_steps
         metrics['g1_rejected_actions'] = rejected_action_records
         rejected_keys = {(tuple(record['position']), int(record['heading_index']),
-            record['action_kind'], tuple(record['action']) if record['action_kind'] == 'move'
+            record['action_kind'], tuple(record['action']) if record['action_kind'] in {'move', 'sidestep', 'retreat'}
             else int(record['action'])) for record in rejected_action_records}
         metrics['g1_rejected_action_attempts'] = len(rejected_action_records)
         metrics['g1_distinct_rejected_actions'] = len(rejected_keys)

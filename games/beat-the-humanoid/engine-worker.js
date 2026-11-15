@@ -1,11 +1,35 @@
 const CDN='https://cdn.jsdelivr.net/pyodide/v0.27.7/full/';
-const files=['__init__','simulation','observation','scheduling','memory','navigation','evaluation'].map(n=>'spatial_memory/'+n+'.py').concat('browser_engine.py');
+const files=['__init__','simulation','observation','scheduling','memory','navigation','evaluation','mujoco_navigation','mujoco_perception','emergency_safety','pedestrian_tracking'].map(n=>'spatial_memory/'+n+'.py').concat('browser_engine.py','mujoco.py');
 const ready=(async()=>{
- importScripts(CDN+'pyodide.js');
+ importScripts(CDN+'pyodide.js','./mujoco-bridge.js');
  const p=await loadPyodide({indexURL:CDN});
  await p.loadPackage('numpy');p.FS.mkdirTree('/game/spatial_memory');
  await Promise.all(files.map(async file=>{const r=await fetch('./python/'+file);if(!r.ok)throw Error('Missing '+file);p.FS.writeFile('/game/'+file,await r.text())}));
  p.runPython("import sys; sys.path.insert(0, '/game'); from browser_engine import browser_episode");return p;
 })();
+let nativeReady;
+async function prepareNative(p){
+ if(!nativeReady)nativeReady=(async()=>{
+  const [r,m]=await Promise.all([fetch('./models/g1.xml'),fetch('./models/manifest.json')]);
+  if(!r.ok||!m.ok)throw Error('G1 XML or manifest missing');
+  const bytes=new Uint8Array(await r.arrayBuffer()),manifest=await m.json();
+  const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),x=>x.toString(16).padStart(2,'0')).join('');
+  if(digest!==manifest.xml_sha256)throw Error('G1 XML SHA-256 mismatch');
+  p.FS.mkdirTree('/third_party/unitree_g1');
+  p.FS.writeFile('/third_party/unitree_g1/g1.xml',bytes);
+  await wasmBridge.prepare();
+ })();
+ return nativeReady;
+}
 ready.then(()=>postMessage({type:'ready'}),e=>postMessage({type:'error',error:String(e)}));
-self.onmessage=async({data})=>{try{const p=await ready,fn=p.globals.get('browser_episode');try{postMessage({id:data.id,value:JSON.parse(fn(JSON.stringify(data.payload)))})}finally{fn.destroy()}}catch(e){postMessage({id:data.id,error:String(e)})}};
+self.onmessage=async({data})=>{
+ const native=data.payload.backend==='mujoco-wasm';
+ try{
+  const p=await ready;
+  if(native){postMessage({type:'progress',message:'MUJOCO WASM · LOADING G1 / CHECKING RAY API'});await prepareNative(p);postMessage({type:'progress',message:'MUJOCO WASM · COMPUTING G1 EPISODE'})}
+  const fn=p.globals.get('browser_episode');
+  try{postMessage({id:data.id,value:JSON.parse(fn(JSON.stringify(data.payload)))})}
+  finally{fn.destroy()}
+ }catch(e){postMessage({id:data.id,error:String(e)})}
+ finally{if(native)wasmBridge.close()}
+};
