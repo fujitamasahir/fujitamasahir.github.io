@@ -4,11 +4,20 @@ const ready=(async()=>{
  importScripts(CDN+'pyodide.js','./mujoco-bridge.js?v=9');
  const p=await loadPyodide({indexURL:CDN});
  await p.loadPackage('numpy');p.FS.mkdirTree('/game/spatial_memory');
- const response=await fetch('./python-sources.json?v=1');
+ const response=await fetch('./python-sources.json?v=2',{cache:'no-cache'});
  if(!response.ok)throw Error('Python engine bundle unavailable (HTTP '+response.status+')');
  const bundle=await response.json();
  if(bundle.version!==1||!bundle.files)throw Error('Invalid Python engine bundle');
- for(const file of files){if(typeof bundle.files[file]!=='string')throw Error('Missing '+file+' in engine bundle');p.FS.writeFile('/game/'+file,bundle.files[file]);}
+ for(const file of files){
+  let source=bundle.files[file];
+  if(typeof source!=='string'){
+   const fallback=await fetch('./python/'+file+'?v=2',{cache:'no-cache'});
+   if(!fallback.ok)throw Error('Missing '+file+' in engine bundle and source fallback (HTTP '+fallback.status+')');
+   source=await fallback.text();
+   if(!source.trim()||/^\s*<!doctype html/i.test(source))throw Error('Invalid Python source: '+file);
+  }
+  p.FS.writeFile('/game/'+file,source);
+ }
  p.runPython("import sys; sys.path.insert(0, '/game'); from browser_engine import session_start, session_next, session_edit, session_close");return p;
 })();
 let nativeReady;
