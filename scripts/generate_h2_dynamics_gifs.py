@@ -260,7 +260,10 @@ def draw_panel(data: dict, step: int, label: str, number: int) -> Image.Image:
         d.text((W - 135, 477), "GOAL REACHED", fill=COLORS["success"], font=font(11, True))
     # Legend with shapes matching Experiment Review.
     ly = 511
-    # Reuse the concave four-point wedge silhouette shown on the map.\n    g1_points = [(26, ly), (13, ly - 6), (17, ly), (13, ly + 6)]\n    d.polygon(g1_points, fill=COLORS["robot"])\n    d.line(g1_points + [g1_points[0]], fill=COLORS["robot_edge"], width=1)
+    # Reuse the concave four-point wedge silhouette shown on the map.
+    g1_points = [(26, ly), (13, ly - 6), (17, ly), (13, ly + 6)]
+    d.polygon(g1_points, fill=COLORS["robot"])
+    d.line(g1_points + [g1_points[0]], fill=COLORS["robot_edge"], width=1)
     d.text((31, ly - 7), "G1", fill=COLORS["muted"], font=font(11))
     d.rectangle((80, ly - 5, 89, ly + 4), fill=COLORS["object"])
     d.text((94, ly - 7), "Object", fill=COLORS["muted"], font=font(11))
@@ -277,7 +280,13 @@ def save_gif(data: dict, label: str, number: int, filename: str) -> dict:
     frames = [draw_panel(data, step, label, number) for step in range(MAX_STEPS + 1)]
     # A single stable palette prevents color flicker between frames.
     sample = frames[20].resize((240, 269))
-    # Guarantee the pedestrian red survives the shared GIF palette even when\n    # pedestrians are absent from the sample frame.\n    palette_draw = ImageDraw.Draw(sample)\n    for color_index, color in enumerate(COLORS.values()):\n        x = color_index * 11\n        palette_draw.rectangle((x, 0, x + 10, 11), fill=color)\n    palette = sample.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
+    # Guarantee the pedestrian red survives the shared GIF palette even when
+    # pedestrians are absent from the sample frame.
+    palette_draw = ImageDraw.Draw(sample)
+    for color_index, color in enumerate(COLORS.values()):
+        x = color_index * 11
+        palette_draw.rectangle((x, 0, x + 10, 11), fill=color)
+    palette = sample.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
     paletted = [f.quantize(palette=palette, dither=Image.Dither.NONE) for f in frames]
     dest = OUTPUT_DIR / filename
     paletted[0].save(dest, save_all=True, append_images=paletted[1:],
