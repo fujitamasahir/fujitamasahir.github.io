@@ -1,0 +1,91 @@
+{
+  "description": "Paired real H2 Experiment Review replays of the kinematic Unitree G1 proxy",
+  "source_repo": "fujitamasahir/humanoid-spatial-memory",
+  "source_commit": "3b208befeb268cb2ae789add7deaaf859abcfc5a",
+  "maze_identity": "h2-final-generalization-v1-20261114:BP:910010012",
+  "display_maze_number": 24,
+  "model": "rdao_v1_footprint",
+  "schedules": {
+    "low": 0,
+    "high": 1
+  },
+  "seed": 42,
+  "selection": {
+    "qualifies": true,
+    "schedules": [
+      0,
+      1
+    ],
+    "pedestrian_frames": [
+      0,
+      81
+    ],
+    "nearby_pedestrian_frames": [
+      0,
+      61
+    ],
+    "robot_travel_cells": [
+      51.0,
+      51.0
+    ],
+    "high_events": {
+      "addition": 24,
+      "relocation": 35,
+      "removal": 21
+    },
+    "low_events": {
+      "no_change_in_saved_schedule": 66,
+      "saved_schedule_changes": 1
+    },
+    "success": [
+      true,
+      false
+    ],
+    "steps": [
+      67,
+      80
+    ]
+  },
+  "low": {
+    "entry": {
+      "condition": "original",
+      "model_id": "rdao_v1_footprint",
+      "path": "results/phase2_mujoco/h2_comprehensive_benchmark_v1/original_environment/episodes/original/rdao_v1_footprint/h2-final-generalization-v1-20261114_BP_910010012_s0_seed42.json.gz",
+      "payload_type": "replay",
+      "schedule": 0,
+      "seed": 42,
+      "sha256": "8117eb14a613deb8bef05abe6bec92683b14ee149d0ca2e20116598c7b8dff96",
+      "world_identity": "h2-final-generalization-v1-20261114:BP:910010012"
+    },
+    "result": {
+      "file": "assets/spatial-memory/h2-unseen-low-frequency.gif",
+      "frames": 81,
+      "bytes": 1033961
+    }
+  },
+  "high": {
+    "entry": {
+      "condition": "high_frequency",
+      "model_id": "rdao_v1_footprint",
+      "path": "results/phase2_mujoco/h2_comprehensive_benchmark_v1/high_frequency_environment/episodes/high_frequency/rdao_v1_footprint/h2-final-generalization-v1-20261114_BP_910010012_s1_seed42.json.gz",
+      "payload_type": "replay",
+      "schedule": 1,
+      "seed": 42,
+      "sha256": "c495d20a77f5147bf6ab307d07152f023876b27d02b83c187267505655679bfe",
+      "world_identity": "h2-final-generalization-v1-20261114:BP:910010012"
+    },
+    "result": {
+      "file": "assets/spatial-memory/h2-unseen-high-frequency.gif",
+      "frames": 81,
+      "bytes": 1269299
+    }
+  },
+  "animation": {
+    "step_range": [
+      0,
+      80
+    ],
+    "duration_ms": 180,
+    "notes": "After the episode ends, its final recorded frame is held; no extra states are simulated."
+  }
+}
