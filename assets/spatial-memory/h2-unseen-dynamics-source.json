@@ -60,7 +60,7 @@
     "result": {
       "file": "assets/spatial-memory/h2-unseen-low-frequency.gif",
       "frames": 81,
-      "bytes": 1033961
+      "bytes": 1024814
     }
   },
   "high": {
@@ -77,7 +77,7 @@
     "result": {
       "file": "assets/spatial-memory/h2-unseen-high-frequency.gif",
       "frames": 81,
-      "bytes": 1269299
+      "bytes": 1269690
     }
   },
   "animation": {
