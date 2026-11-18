@@ -26,7 +26,6 @@ REPO = "fujitamasahir/humanoid-spatial-memory"
 SOURCE_COMMIT = "3b208befeb268cb2ae789add7deaaf859abcfc5a"
 MANIFEST_PATH = "results/phase2_mujoco/h2_comprehensive_benchmark_v1/combined_dataset/replay_index.json"
 MODEL = "rdao_v1_footprint"
-SCHEDULE = 0
 MAX_STEPS = 80
 OUTPUT_DIR = Path("assets/spatial-memory")
 
@@ -98,16 +97,17 @@ def score_pair(low: dict, high: dict) -> tuple[float, dict]:
     diverse = all(high_events.get(e, 0) >= 2 for e in ("addition", "relocation", "removal"))
     active_high = sum(high_events.get(e, 0) for e in ("addition", "relocation", "removal"))
     low_changes = sum(v for e, v in low_events.items() if e not in ("no_op", "no_change_in_saved_schedule"))
-    qualifies = (full and diverse and min(ped_count) >= 20 and
-                 min(travel) >= 12 and active_high >= 45 and low_changes >= 2)
+    qualifies = (full and diverse and ped_count[1] >= 20 and nearby[1] >= 5 and
+                 min(travel) >= 12 and active_high >= 45 and low_changes >= 1)
     # Pedestrian encounters, visibly distinct dynamics, and both successful
     # runs improve the clarity of a paired teaching illustration.
-    score = (1000 if qualifies else 0) + min(nearby) * 4 + min(ped_count) * .12 \
-        + min(travel) * 1.5 + min(active_high, 70) * .3 \
+    score = (1000 if qualifies else 0) + nearby[1] * 4 + ped_count[1] * .12 \
+        + min(travel) * 1.5 + min(active_high, 70) * .3 + low_changes * 8 \
         + (80 if low["row"]["success"] and high["row"]["success"] else 0) \
         + (35 if low["replay"]["map_family"] == "R" else 0) \
+        + (50 if low["entry"]["schedule"] == high["entry"]["schedule"] else 0) \
         - 1.5 * sum(high_events.get(e, 0) for e in ("no_op",))
-    return score, {"qualifies": qualifies, "pedestrian_frames": ped_count,
+    return score, {"qualifies": qualifies, "schedules": [low["entry"]["schedule"], high["entry"]["schedule"]], "pedestrian_frames": ped_count,
                    "nearby_pedestrian_frames": nearby, "robot_travel_cells": [round(v, 1) for v in travel],
                    "high_events": dict(high_events), "low_events": dict(low_events),
                    "success": [bool(low["row"]["success"]), bool(high["row"]["success"])],
@@ -115,40 +115,42 @@ def score_pair(low: dict, high: dict) -> tuple[float, dict]:
 
 
 def choose_pair(entries: list[dict]) -> tuple[dict, dict, dict]:
-    relevant = [e for e in entries if e["model_id"] == MODEL and e["schedule"] == SCHEDULE
+    relevant = [e for e in entries if e["model_id"] == MODEL
                 and e["condition"] in ("original", "high_frequency") and e["payload_type"] == "replay"]
     by_maze: dict[str, dict] = {}
     for e in relevant:
-        by_maze.setdefault(e["world_identity"], {})[e["condition"]] = e
-    candidates = {k: v for k, v in by_maze.items() if len(v) == 2}
+        by_maze.setdefault(e["world_identity"], {})[(e["condition"], e["schedule"])] = e
+    candidates = {k: v for k, v in by_maze.items() if len(v) == 4}
     if len(candidates) != 36:
         raise ValueError(f"Expected 36 paired unseen mazes, found {len(candidates)}")
-    print(f"Evaluating {len(candidates)} matched unseen mazes, model={MODEL}, schedule={SCHEDULE}", flush=True)
+    print(f"Evaluating {len(candidates)} unseen mazes, model={MODEL}, two schedules each", flush=True)
     episodes = {}
     with ThreadPoolExecutor(max_workers=8) as pool:
-        futures = {pool.submit(read_episode, e): (maze, cond)
-                   for maze, pair in candidates.items() for cond, e in pair.items()}
+        futures = {pool.submit(read_episode, e): (maze, cond, schedule)
+                   for maze, pair in candidates.items() for (cond, schedule), e in pair.items()}
         for future in as_completed(futures):
             episodes[futures[future]] = future.result()
     ranked = []
     for maze in candidates:
-        low, high = episodes[maze, "original"], episodes[maze, "high_frequency"]
-        if low["replay"]["static_walls_xy"] != high["replay"]["static_walls_xy"] \
-           or low["replay"]["start_xy"] != high["replay"]["start_xy"] \
-           or low["replay"]["goal_xy"] != high["replay"]["goal_xy"]:
-            raise ValueError(f"Paired map geometry differs: {maze}")
-        score, metrics = score_pair(low, high)
-        ranked.append((score, maze, metrics))
-    ranked.sort(key=lambda item: (-item[0], item[1]))
-    for score, maze, metrics in ranked[:5]:
-        print(f"Candidate score={score:.1f} {maze}: {json.dumps(metrics)}", flush=True)
-    winner = next((item for item in ranked if item[2]["qualifies"]), None)
+        for low_schedule in (0, 1):
+            for high_schedule in (0, 1):
+                low = episodes[maze, "original", low_schedule]
+                high = episodes[maze, "high_frequency", high_schedule]
+                if (low["replay"]["static_walls_xy"] != high["replay"]["static_walls_xy"]
+                    or low["replay"]["start_xy"] != high["replay"]["start_xy"]
+                    or low["replay"]["goal_xy"] != high["replay"]["goal_xy"]):
+                    raise ValueError(f"Paired map geometry differs: {maze}")
+                score, metrics = score_pair(low, high)
+                ranked.append((score, maze, low_schedule, high_schedule, metrics))
+    ranked.sort(key=lambda item: (-item[0], item[1], item[2], item[3]))
+    for score, maze, low_schedule, high_schedule, metrics in ranked[:5]:
+        print(f"Candidate score={score:.1f} {maze} low=S{low_schedule} high=S{high_schedule}: {json.dumps(metrics)}", flush=True)
+    winner = next((item for item in ranked if item[4]["qualifies"]), None)
     if winner is None:
-        raise RuntimeError("No matched maze with visible robot, pedestrians and object events")
-    _, maze, metrics = winner
-    print(f"SELECTED {maze}: {json.dumps(metrics)}", flush=True)
-    return episodes[maze, "original"], episodes[maze, "high_frequency"], metrics
-
+        raise RuntimeError("No matched maze with low-frequency object changes and high-frequency pedestrians")
+    _, maze, low_schedule, high_schedule, metrics = winner
+    print(f"SELECTED {maze} low=S{low_schedule} high=S{high_schedule}: {json.dumps(metrics)}", flush=True)
+    return episodes[maze, "original", low_schedule], episodes[maze, "high_frequency", high_schedule], metrics
 
 def font(size: int, bold: bool = False):
     path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
@@ -181,7 +183,7 @@ def draw_panel(data: dict, step: int, label: str, number: int) -> Image.Image:
     d = ImageDraw.Draw(im)
     d.rounded_rectangle((10, 8, W - 10, 68), radius=12, fill=COLORS["panel"])
     d.text((23, 15), label.upper(), fill=COLORS["white"], font=font(20, True))
-    d.text((23, 43), f"UNSEEN MAZE {number:02d}   |   RDAO v1 Footprint", fill=COLORS["muted"], font=font(12))
+    d.text((23, 43), f"MAZE {number:02d} / SCENARIO {data['entry']['schedule']}   |   RDAO v1 Footprint", fill=COLORS["muted"], font=font(12))
     step_label = f"STEP {index:02d}/{MAX_STEPS}"
     box = d.textbbox((0, 0), step_label, font=font(13, True))
     d.text((W - 23 - (box[2] - box[0]), 18), step_label, fill=COLORS["goal"], font=font(13, True))
@@ -293,6 +295,10 @@ def main():
     maze = low["entry"]["world_identity"]
     if high["entry"]["world_identity"] != maze:
         raise ValueError("Not the same unseen maze")
+    if metrics["schedules"][0] == metrics["schedules"][1]:
+        print("Selected a matched schedule with both object changes and pedestrians", flush=True)
+    else:
+        print("NOTE: schedules differ to show low-frequency object changes and high-frequency pedestrians; these are illustrative, not a controlled pair", flush=True)
     catalog = json.loads(Path("games/beat-the-humanoid/h2/index.json").read_text())
     number = next(m["number"] for m in catalog["maps"] if m["identity"] == maze)
     low_result = save_gif(low, "Low-frequency changes", number, "h2-unseen-low-frequency.gif")
@@ -307,7 +313,7 @@ def main():
         "description": "Paired real H2 Experiment Review replays of the kinematic Unitree G1 proxy",
         "source_repo": REPO, "source_commit": SOURCE_COMMIT,
         "maze_identity": maze, "display_maze_number": number,
-        "model": MODEL, "schedule": SCHEDULE, "seed": 42,
+        "model": MODEL, "schedules": {"low": low["entry"]["schedule"], "high": high["entry"]["schedule"]}, "seed": 42,
         "selection": metrics,
         "low": {"entry": low["entry"], "result": low_result},
         "high": {"entry": high["entry"], "result": high_result},
