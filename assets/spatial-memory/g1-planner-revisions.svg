@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 362" role="img" aria-labelledby="title desc">
+<title id="title">Navigation success across three Phase 2 planner variants</title>
+<desc id="desc">The original footprint-aware planner allowed lateral and backward translation and reached 214 of 288 goals. The initial forward-first planner using conservative rectangle-based turn screening reached 21 of 288. The revised forward-first planner using MuJoCo collision checks for selected turns reached 225 of 288 goals, with 224 contact-free completions.</desc>
+<rect width="920" height="362" rx="12" fill="#fff"/>
+<text x="30" y="34" font-size="21" font-weight="bold" font-family="Arial,Helvetica,sans-serif" fill="#222">G1 navigation performance across planner revisions</text>
+<text x="30" y="60" font-size="14" font-family="Arial,Helvetica,sans-serif" fill="#64748b">The same 36 development worlds, 2 schedules, and 4 observation policies in each run</text>
+<g font-family="Arial,Helvetica,sans-serif">
+<text x="30" y="108" font-size="15" font-weight="bold" fill="#1f2937">Initial footprint-aware planner</text>
+<text x="30" y="125" font-size="13" fill="#64748b">Lateral and backward moves permitted</text>
+<rect x="327" y="99" width="449" height="32" rx="5" fill="#f0f2f4"/>
+<rect x="327" y="99" width="334" height="32" rx="5" fill="#8093a5"/>
+<text x="792" y="121" font-size="17" font-weight="bold" fill="#1f2937">214/288</text>
+<text x="30" y="192" font-size="15" font-weight="bold" fill="#1f2937">First forward-first planner</text>
+<text x="30" y="209" font-size="13" fill="#64748b">Rectangle-based turn prefilter</text>
+<rect x="327" y="183" width="449" height="32" rx="5" fill="#f0f2f4"/>
+<rect x="327" y="183" width="33" height="32" rx="5" fill="#c27d53"/>
+<text x="792" y="205" font-size="17" font-weight="bold" fill="#1f2937">21/288</text>
+<text x="30" y="276" font-size="15" font-weight="bold" fill="#1f2937">Revised forward-first planner</text>
+<text x="30" y="293" font-size="13" fill="#64748b">Actual G1 geometry for selected turns</text>
+<rect x="327" y="267" width="449" height="32" rx="5" fill="#f0f2f4"/>
+<rect x="327" y="267" width="351" height="32" rx="5" fill="#1772d0"/>
+<text x="792" y="289" font-size="17" font-weight="bold" fill="#1f2937">225/288</text>
+<line x1="30" y1="321" x2="890" y2="321" stroke="#e5e7eb"/>
+<text x="30" y="343" font-size="13" fill="#64748b">The revised forward-first run reached 224 goals without unwanted contact (77.8%).</text>
+</g></svg>
