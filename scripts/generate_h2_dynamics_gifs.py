@@ -33,7 +33,7 @@ COLORS = {
     "bg": "#0d1724", "panel": "#132232", "free": "#1c2d3c",
     "wall_r": "#355c88", "wall_bp": "#327d70", "wall_m": "#76529b",
     "object": "#f19a43", "object_detail": "#a85d25",
-    "ped": "#f26970", "robot": "#64b4ff", "robot_edge": "#c9ebff",
+    "ped": "#f0444f", "robot": "#64b4ff", "robot_edge": "#c9ebff",
     "goal": "#ffd074", "event": "#fff2bb", "trail": "#6ba7d4",
     "white": "#f1f6fa", "muted": "#a9bccb", "border": "#4c6376",
     "success": "#8bdfbb", "dark": "#0a1420",
@@ -183,7 +183,7 @@ def draw_panel(data: dict, step: int, label: str, number: int) -> Image.Image:
     d = ImageDraw.Draw(im)
     d.rounded_rectangle((10, 8, W - 10, 68), radius=12, fill=COLORS["panel"])
     d.text((23, 15), label.upper(), fill=COLORS["white"], font=font(20, True))
-    d.text((23, 43), f"MAZE {number:02d} / SCENARIO {data['entry']['schedule']}   |   RDAO v1 Footprint", fill=COLORS["muted"], font=font(12))
+    d.text((23, 43), f"MAZE {number:02d}  |  {replay['map_family']}  |  RDAO v1 Footprint", fill=COLORS["muted"], font=font(13))
     step_label = f"STEP {index:02d}/{MAX_STEPS}"
     box = d.textbbox((0, 0), step_label, font=font(13, True))
     d.text((W - 23 - (box[2] - box[0]), 18), step_label, fill=COLORS["goal"], font=font(13, True))
@@ -260,7 +260,7 @@ def draw_panel(data: dict, step: int, label: str, number: int) -> Image.Image:
         d.text((W - 135, 477), "GOAL REACHED", fill=COLORS["success"], font=font(11, True))
     # Legend with shapes matching Experiment Review.
     ly = 511
-    d.polygon([(25, ly - 5), (17, ly + 3), (25, ly + 2)], fill=COLORS["robot"])
+    # Reuse the concave four-point wedge silhouette shown on the map.\n    g1_points = [(26, ly), (13, ly - 6), (17, ly), (13, ly + 6)]\n    d.polygon(g1_points, fill=COLORS["robot"])\n    d.line(g1_points + [g1_points[0]], fill=COLORS["robot_edge"], width=1)
     d.text((31, ly - 7), "G1", fill=COLORS["muted"], font=font(11))
     d.rectangle((80, ly - 5, 89, ly + 4), fill=COLORS["object"])
     d.text((94, ly - 7), "Object", fill=COLORS["muted"], font=font(11))
@@ -277,7 +277,7 @@ def save_gif(data: dict, label: str, number: int, filename: str) -> dict:
     frames = [draw_panel(data, step, label, number) for step in range(MAX_STEPS + 1)]
     # A single stable palette prevents color flicker between frames.
     sample = frames[20].resize((240, 269))
-    palette = sample.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
+    # Guarantee the pedestrian red survives the shared GIF palette even when\n    # pedestrians are absent from the sample frame.\n    palette_draw = ImageDraw.Draw(sample)\n    for color_index, color in enumerate(COLORS.values()):\n        x = color_index * 11\n        palette_draw.rectangle((x, 0, x + 10, 11), fill=color)\n    palette = sample.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
     paletted = [f.quantize(palette=palette, dither=Image.Dither.NONE) for f in frames]
     dest = OUTPUT_DIR / filename
     paletted[0].save(dest, save_all=True, append_images=paletted[1:],
