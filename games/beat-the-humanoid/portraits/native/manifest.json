@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "source_commit": "b50f81255756a9c8bd55dddd2ea72c54d58ebb7d",
+  "assets": {
+    "periodic.png": {
+      "sha256": "d7b709fa18e90a70747637a025f4e4e467f26414555f2891a3d30e21a05809fa",
+      "width": 360,
+      "height": 480,
+      "bytes": 40137
+    },
+    "periodic-motion.png": {
+      "sha256": "2a4f9104abd2e78afcca6042350c9845e1e2e8e1fd6b00fb7077d14ff32f2820",
+      "width": 2160,
+      "height": 4800,
+      "bytes": 1903063
+    },
+    "periodic-defeat-motion-v14.png": {
+      "sha256": "d3d713f6db5e05a64e2227f7cf2be97ac23f0a3728f191194c3fc3f885f6c5ce",
+      "width": 2160,
+      "height": 4320,
+      "bytes": 2084305
+    },
+    "age.png": {
+      "sha256": "d9a94a803f16d4c454ffdcd78b0190b5c6c7c7f619d28660e966f7cea1161ee7",
+      "width": 360,
+      "height": 480,
+      "bytes": 39895
+    },
+    "age-motion.png": {
+      "sha256": "50793cd64c0d1394475bede7968b6972c2c9effb8321ea094820a72e03a0d32f",
+      "width": 2160,
+      "height": 4800,
+      "bytes": 2086028
+    },
+    "age-defeat-motion-v14.png": {
+      "sha256": "2c80ae484b8abc1b66af27363b4c99a8a1e1dfc3716d881432ea442ddab58ee6",
+      "width": 2160,
+      "height": 4320,
+      "bytes": 2069090
+    },
+    "uncertainty.png": {
+      "sha256": "50b0fcd86f7b394ce5915bb9eadc0e3ffc1677e83c9baeee8e490c307e15a340",
+      "width": 360,
+      "height": 480,
+      "bytes": 40016
+    },
+    "uncertainty-motion.png": {
+      "sha256": "cfc47731221e6b250344b727875e089ded1e25e4d579dd2a8adf76d2b73cf19b",
+      "width": 2160,
+      "height": 4800,
+      "bytes": 1921005
+    },
+    "uncertainty-defeat-motion-v14.png": {
+      "sha256": "62b1d1300623e94b07da049bd53608a8b8953e8648c169a12b2e5fcf2dad3ed0",
+      "width": 2160,
+      "height": 4320,
+      "bytes": 2086303
+    }
+  }
+}

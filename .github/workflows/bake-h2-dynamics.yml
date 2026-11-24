@@ -1,0 +1,38 @@
+name: Bake paired H2 unseen dynamics GIFs
+on:
+  push:
+    branches: [portfolio-initial-site]
+    paths:
+      - '.github/workflows/bake-h2-dynamics.yml'
+      - 'scripts/generate_h2_dynamics_gifs.py'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: bake-h2-dynamics
+  cancel-in-progress: false
+jobs:
+  bake:
+    if: github.ref == 'refs/heads/portfolio-initial-site'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install GIF rendering dependency
+        run: python -m pip install 'Pillow==11.3.0'
+      - name: Generate source-verified paired unseen-maze GIFs
+        run: python scripts/generate_h2_dynamics_gifs.py
+      - name: Commit verified GIFs and provenance to portfolio
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/spatial-memory/h2-unseen-low-frequency.gif
+          git add assets/spatial-memory/h2-unseen-high-frequency.gif
+          git add assets/spatial-memory/h2-unseen-dynamics-preview.png
+          git add assets/spatial-memory/h2-unseen-dynamics-source.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Add verified paired unseen-maze G1 dynamics animations'
+          git push origin HEAD:refs/heads/portfolio-initial-site
